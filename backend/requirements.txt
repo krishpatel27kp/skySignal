@@ -1,0 +1,44 @@
+# ── API Framework ──
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+python-multipart==0.0.20
+sse-starlette==2.3.6
+
+# ── Database ──
+sqlalchemy[asyncio]==2.0.41
+asyncpg==0.30.0
+geoalchemy2==0.17.1
+shapely==2.0.6
+alembic==1.15.2
+
+# ── Settings & Auth ──
+pydantic-settings==2.9.1
+python-jose[cryptography]==3.4.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+PyJWT==2.9.0
+
+# ── Task Queue & Message Broker ──
+celery[redis]==5.5.2
+redis==5.3.0
+aiokafka>=0.12.0
+
+# ── Object Storage (MinIO / S3) ──
+boto3==1.38.34
+minio>=7.2.0
+
+
+# ── HTTP Client (ingestion adapters) ──
+httpx==0.28.1
+
+# ── Ingestion: Media, Language Detection ──
+Pillow==12.3.0
+imagehash==4.3.2
+langdetect==1.0.9
+
+# ── ML: Classification & Dedup ──
+scikit-learn==1.6.1
+
+# ── Testing ──
+pytest==8.4.1
+pytest-asyncio==1.0.0

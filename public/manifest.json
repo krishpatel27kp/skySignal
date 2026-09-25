@@ -1,0 +1,19 @@
+{
+  "name": "SkySignal 2.0 — Weather Intelligence Platform",
+  "short_name": "SkySignal",
+  "description": "National weather event monitoring, citizen reporting, and IMD analyst command center.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090e17",
+  "theme_color": "#090e17",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["weather", "government", "utilities"]
+}

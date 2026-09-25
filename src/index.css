@@ -1,0 +1,369 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════
+   SkySignal 2.0 — Design System & Theme Tokens
+   Atmospheric Glassmorphism + Obsidian Command Center
+   Font: Outfit (geometric sans-serif)
+   ═══════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Core Brand Colors ── */
+  --color-primary-50: #e6f4fa;
+  --color-primary-100: #b3dff0;
+  --color-primary-200: #80c9e5;
+  --color-primary-300: #4db4db;
+  --color-primary-400: #2ba1cf;
+  --color-primary-500: #1c7293;
+  --color-primary-600: #186381;
+  --color-primary-700: #12506a;
+  --color-primary-800: #0d3d53;
+  --color-primary-900: #082a3c;
+
+  /* ── Atmospheric Accent ── */
+  --color-sky-accent: #0284c7;
+  --color-cyan-accent: #06b6d4;
+  --color-blue-accent: #2563eb;
+
+  /* ── Severity Taxonomy (strict 3-tier) ── */
+  --color-severity-minor: #10b981;
+  --color-severity-minor-bg: #ecfdf5;
+  --color-severity-minor-border: #a7f3d0;
+  --color-severity-moderate: #0284c7;
+  --color-severity-moderate-bg: #e0f2fe;
+  --color-severity-moderate-border: #7dd3fc;
+  --color-severity-severe: #ef4444;
+  --color-severity-severe-bg: #fef2f2;
+  --color-severity-severe-border: #fecaca;
+
+  /* ── Canvas & Surfaces ── */
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-surface-active: #e2e8f0;
+  --color-border: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+
+  /* ── Obsidian Sidebar ── */
+  --color-sidebar-from: #090e17;
+  --color-sidebar-mid: #0d1527;
+  --color-sidebar-to: #080c16;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+  --color-sidebar-text: rgba(255, 255, 255, 0.65);
+  --color-sidebar-text-active: #ffffff;
+  --color-sidebar-glow: #38bdf8;
+
+  /* ── Text Hierarchy ── */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #94a3b8;
+  --color-text-inverse: #ffffff;
+
+  /* ── Status Colors ── */
+  --color-status-detected: #8b5cf6;
+  --color-status-emerging: #f59e0b;
+  --color-status-confirmed: #3b82f6;
+  --color-status-active: #ef4444;
+  --color-status-declining: #f97316;
+  --color-status-resolved: #10b981;
+
+  /* ── Weather Category Colors ── */
+  --color-cat-rainfall: #3b82f6;
+  --color-cat-thunderstorm: #8b5cf6;
+  --color-cat-flooding: #0891b2;
+  --color-cat-heatwave: #f97316;
+  --color-cat-fog: #6b7280;
+  --color-cat-dust-storm: #d97706;
+  --color-cat-strong-wind: #0d9488;
+
+  /* ── Typography ── */
+  --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── Spacing ── */
+  --spacing-sidebar: 260px;
+  --spacing-topbar: 64px;
+
+  /* ── Shadows ── */
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.06);
+  --shadow-glass-hover: 0 12px 40px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-glow-primary: 0 0 20px rgba(28, 114, 147, 0.15);
+  --shadow-glow-cyan: 0 0 20px rgba(6, 182, 212, 0.2);
+
+  /* ── Border Radius ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* ── Transitions ── */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Base Styles
+   ═══════════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-canvas);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+}
+
+/* ── Focus Accessibility (WCAG AA — 3px solid #57a9c7) ── */
+*:focus-visible {
+  outline: 3px solid #57a9c7;
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Glass Card Utility (Professional & Minimal Contrast)
+   Crisp white background (95% solid) + subtle border + soft shadow
+   ═══════════════════════════════════════════════════════ */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s var(--ease-smooth);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Scrollbar Styling
+   ═══════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-tertiary);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-scale {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(6, 182, 212, 0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s var(--ease-smooth) both;
+}
+
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.4s var(--ease-smooth) both;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s var(--ease-spring) both;
+}
+
+.animate-count-up {
+  animation: count-up 0.6s var(--ease-spring) both;
+}
+
+/* ── Staggered children ── */
+.stagger-children > * {
+  animation: fade-in 0.4s var(--ease-smooth) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+
+/* ═══════════════════════════════════════════════════════
+   Sidebar Obsidian Gradient (3-stop)
+   #090e17 → #0d1527 → #080c16
+   ═══════════════════════════════════════════════════════ */
+
+.sidebar-gradient {
+  background: linear-gradient(180deg, var(--color-sidebar-from) 0%, var(--color-sidebar-mid) 60%, var(--color-sidebar-to) 100%);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Ambient Background Glow
+   Atmospheric radial glows on canvas
+   ═══════════════════════════════════════════════════════ */
+
+.ambient-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 30% 20%, rgba(2, 132, 199, 0.02), transparent),
+    radial-gradient(ellipse 500px 350px at 70% 60%, rgba(37, 99, 235, 0.015), transparent);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Severity Badge Utilities
+   Minor: Emerald, Moderate: Sky Blue, Severe: Crimson
+   Uses icon + text (no color-only badges)
+   ═══════════════════════════════════════════════════════ */
+
+.badge-severity-minor {
+  background-color: var(--color-severity-minor-bg);
+  color: #065f46;
+  border: 1px solid var(--color-severity-minor-border);
+}
+
+.badge-severity-moderate {
+  background-color: var(--color-severity-moderate-bg);
+  color: #075985;
+  border: 1px solid var(--color-severity-moderate-border);
+}
+
+.badge-severity-severe {
+  background-color: var(--color-severity-severe-bg);
+  color: #991b1b;
+  border: 1px solid var(--color-severity-severe-border);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Map Placeholder Grid
+   ═══════════════════════════════════════════════════════ */
+
+.map-grid-bg {
+  background-image:
+    linear-gradient(rgba(6, 182, 212, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 182, 212, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Leaflet Map Overrides
+   ═══════════════════════════════════════════════════════ */
+
+.leaflet-container {
+  background-color: var(--color-canvas);
+  font-family: var(--font-sans);
+  border-radius: 0 0 16px 16px;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-glass);
+  font-family: var(--font-sans);
+}
+
+.leaflet-popup-tip {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Accessibility Standards: Focus Rings & Reduced Motion
+   ═══════════════════════════════════════════════════════ */
+
+/* High-contrast focus rings (WCAG AA) */
+:focus-visible {
+  outline: 3px solid #0284c7;
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

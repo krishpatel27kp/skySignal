@@ -1,0 +1,148 @@
+# ─────────────────────────────────────────────────────────────────
+# SkySignal — Docker Compose (Grand Finale Infrastructure Root)
+#
+# Services:
+#   - api: FastAPI application (built from ./backend)
+#   - db: PostgreSQL 15 + PostGIS 3.3 (expose 5432)
+#   - kafka: Redpanda single-node message broker (ports 9092, 9644)
+#   - kafka-init: Auto-provisioning setup for 9 platform topics
+#   - redis: Redis alpine for caching and Pub/Sub (port 6379)
+#   - minio: MinIO image for S3-compatible media storage (ports 9000, 9001)
+#   - worker: Celery async NLP / geospatial worker
+# ─────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── FastAPI Backend ──────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: skysignal-api
+    ports:
+      - "8000:8000"
+    env_file: ./backend/.env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── PostgreSQL + PostGIS (Expose 5432) ───────────────────────
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: skysignal-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-skygrid}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skygrid_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-skygrid}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-skygrid} -d $${POSTGRES_DB:-skygrid}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Kafka / Redpanda Message Broker ──────────────────────────
+  kafka:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: skysignal-kafka
+    command:
+      - redpanda
+      - start
+      - --smp 1
+      - --reserve-memory 0M
+      - --overprovisioned
+      - --node-id 0
+      - --check=false
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://kafka:29092,OUTSIDE://localhost:9092
+      - --pandaproxy-addr 0.0.0.0:8082
+      - --advertise-pandaproxy-addr localhost:8082
+    ports:
+      - "9092:9092" # Kafka external broker port
+      - "9644:9644" # Admin API
+      - "8082:8082" # HTTP Proxy
+    healthcheck:
+      test: [ "CMD-SHELL", "rpk cluster info --brokers 127.0.0.1:9092" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Auto-provision Kafka Topics ──────────────────────────────
+  kafka-init:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: skysignal-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: >
+      "
+      echo 'Waiting for Redpanda broker readiness...'
+      sleep 2
+      echo 'Auto-provisioning SkySignal Kafka topics...'
+      rpk topic create raw.social raw.news raw.citizen raw.imd normalized.reports processed.dedup processed.classified processed.trusted weather.events --brokers kafka:29092 || true
+      echo 'Active topics successfully provisioned:'
+      rpk topic list --brokers kafka:29092
+      "
+    restart: "no"
+
+  # ── Redis (Alpine) ───────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: skysignal-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ── MinIO (S3-compatible Object Storage: 9000/9001) ───────────
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: skysignal-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-skygrid}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-skygrid_secret}
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
+    volumes:
+      - miniodata:/data
+    restart: unless-stopped
+
+  # ── Celery Worker ────────────────────────────────────────────
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: skysignal-worker
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    env_file: ./backend/.env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+      - db
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:
