@@ -15,6 +15,25 @@
 
 ## 📌 Executive Summary
 
+---
+## 🗺️ New Location Onboarding Flow
+
+The SkySignal application now includes a **full-screen location onboarding modal** that guides users to grant location access before viewing the live dashboard.
+
+- **LocationGateModal.tsx** renders an atmospheric glass UI prompting the user for their location.
+- **GPS Auto‑Detection**: A prominent "Use My Exact GPS Location" button requests high‑accuracy geolocation, reverse‑geocodes the coordinates to city/state, and smoothly flies the Leaflet map to the location at street‑level zoom (`zoom: 16`).
+- **Instant Area Search**: Real‑time autocomplete search across Indian cities and districts, showing live temperature previews.
+- **Manual Location Entry**: Users can manually select a city/district from a dropdown if they prefer not to share GPS.
+- **Seamless Integration**: Once a location is chosen, the modal closes and the map centers on the selected area, enabling the telemetry dashboard to display localized weather events.
+
+> **Note**: This flow is powered by `LocationContext.tsx`, which stores the selected location in React context and persists it across sessions.
+
+For developers, see the source files:
+- [`src/components/LocationGateModal.tsx`](file:///c:/Users/Krish%20Patel/OneDrive/Desktop/skySignal%202.0/src/components/LocationGateModal.tsx)
+- [`src/contexts/LocationContext.tsx`](file:///c:/Users/Krish%20Patel/OneDrive/Desktop/skySignal%202.0/src/contexts/LocationContext.tsx)
+
+---
+
 **SkySignal 2.0** is an enterprise-grade, distributed meteorological intelligence platform designed to ingest raw citizen weather observations, social media signals, and sensor feeds, corroborate them against official IMD data, deduplicate near-identical submissions across space and time, estimate credibility, and fuse them into actionable national weather events in real-time.
 
 Built with strict data scoping and role-based access control (RBAC), the platform delivers a read-only situational awareness dashboard for citizens and a secure, real-time command portal for IMD analysts.
