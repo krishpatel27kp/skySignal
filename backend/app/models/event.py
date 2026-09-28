@@ -108,7 +108,7 @@ class Event(Base):
             name="ck_events_category",
         ),
         CheckConstraint(
-            "severity IN ('minor','moderate','severe')",
+            "severity IN ('low','moderate','high','critical')",
             name="ck_events_severity",
         ),
         CheckConstraint(

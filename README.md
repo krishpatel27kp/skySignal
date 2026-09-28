@@ -116,17 +116,44 @@ Spin up PostgreSQL (PostGIS), Redpanda (Kafka), Redis, and MinIO:
 docker compose up -d
 ```
 
-| Service | Port | Purpose | Credentials |
+| Service | Port (Host : Container) | Purpose | Credentials |
 |---|---|---|---|
-| **PostgreSQL + PostGIS** | `5432` | Spatial DB & GeoAlchemy2 | `skygrid` / `skygrid_secret` |
-| **Redpanda / Kafka** | `9092` | Message Streaming Broker | (None) |
-| **Redis** | `6379` | Telemetry Pub/Sub & Cache | (None) |
-| **MinIO API** | `9000` | S3 Media Storage API | `skygrid` / `skygrid_secret` |
-| **MinIO Console** | `9001` | Object Storage Web Console | `skygrid` / `skygrid_secret` |
+| **PostgreSQL + PostGIS** | `5433:5432` *(avoids host port 5432 conflicts)* | Spatial DB & GeoAlchemy2 | `skygrid` / `skygrid_secret` |
+| **Redpanda / Kafka** | `9092:9092`, `9644:9644` | Message Streaming Broker | (None) |
+| **Redis** | `6379:6379` | Telemetry Pub/Sub & Cache | (None) |
+| **MinIO API** | `9000:9000` | S3 Media Storage API | `skygrid` / `skygrid_secret` |
+| **MinIO Console** | `9001:9001` | Object Storage Web Console | `skygrid` / `skygrid_secret` |
+
+> [!NOTE]
+> The database container maps internal port `5432` to host port `5433` to prevent collision with any existing local PostgreSQL service. Python scripts and API clients automatically detect and handle this port mapping.
 
 ---
 
-### Step 2: Run the FastAPI Backend
+### Step 2: Database Initialization & Seeding
+
+Ensure the database schema is up-to-date and seed initial analyst credentials and mock events:
+
+```bash
+# 1. Apply Alembic database migrations
+cd backend
+alembic upgrade head
+
+# 2. Seed Demo Analyst credentials (analyst@imd.gov.in / Analyst@123)
+python scripts/seed.py
+# (Or if running inside Docker: docker exec -it skysignal-api python scripts/seed.py)
+
+# 3. Seed realistic Indian weather events & multi-source reports
+cd ..
+python -m scripts.seed_mock_data
+```
+
+This populates 5 realistic weather events across India (Mumbai Floods, Ahmedabad Heatwave, Delhi Thunderstorm, Rajasthan Dust Storm, Shimla Fog) with 25 corroborating reports.
+
+---
+
+### Step 3: Run the FastAPI Backend
+
+If running the backend locally outside of Docker:
 
 ```bash
 cd backend
@@ -145,7 +172,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
-### Step 3: Run the React 19 Frontend
+### Step 4: Run the React 19 Frontend
 
 ```bash
 # In the project root directory
@@ -154,6 +181,21 @@ npm run dev
 ```
 
 The application will be live at **`http://localhost:5173`**.
+
+---
+
+### Step 5: Verification & End-to-End Pipeline Testing
+
+Run the automated end-to-end pipeline test script to submit a live report and trace it through the ingestion pipeline:
+
+```bash
+python scripts/e2e_test.py
+```
+
+To watch the asynchronous worker pipeline in action:
+```bash
+docker logs skysignal-worker --tail 100 -f
+```
 
 ---
 

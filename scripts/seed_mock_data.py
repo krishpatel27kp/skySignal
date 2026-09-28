@@ -4,8 +4,33 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[1] / 'backend' / '.env')
 # Add backend directory to PYTHONPATH so that 'app' package can be imported
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
+backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
 
+# Automatically detect if PostgreSQL is mapped to port 5433 (via docker-compose)
+import socket
+def _is_port_listening(port: int) -> bool:
+    try:
+        with socket.create_connection(('127.0.0.1', port), timeout=0.5):
+            return True
+    except Exception:
+        return False
+
+current_db_url = os.environ.get("DATABASE_URL", "")
+if _is_port_listening(5433) and ("localhost:5432" in current_db_url or "127.0.0.1:5432" in current_db_url):
+    try:
+        import asyncpg, asyncio
+        async def _probe():
+            conn = await asyncpg.connect("postgresql://skygrid:skygrid_secret@127.0.0.1:5432/skygrid", timeout=1.0)
+            await conn.close()
+        asyncio.run(_probe())
+    except Exception:
+        # Fall back to Docker-mapped port 5433
+        new_url = current_db_url.replace("localhost:5432", "localhost:5433").replace("127.0.0.1:5432", "127.0.0.1:5433")
+        os.environ["DATABASE_URL"] = new_url
+        os.environ["POSTGRES_PORT"] = "5433"
+        print(f"[INFO] Auto-detected Docker PostGIS on port 5433. Using: {new_url}")
 
 import asyncio
 import random
@@ -59,7 +84,7 @@ EVENTS_DATA = [
     {
         "title": "Severe Flooding in Mumbai",
         "category": "flooding",
-        "severity": "severe",
+        "severity": "critical",
         "lifecycle_status": "active",
         "city": "Mumbai",
         "state": "Maharashtra",
@@ -69,7 +94,7 @@ EVENTS_DATA = [
     {
         "title": "Heatwave in Ahmedabad",
         "category": "heatwave",
-        "severity": "severe",
+        "severity": "high",
         "lifecycle_status": "confirmed",
         "city": "Ahmedabad",
         "state": "Gujarat",
@@ -99,7 +124,7 @@ EVENTS_DATA = [
     {
         "title": "Fog in Shimla",
         "category": "fog",
-        "severity": "minor",
+        "severity": "low",
         "lifecycle_status": "confirmed",
         "city": "Shimla",
         "state": "Himachal Pradesh",
@@ -141,6 +166,8 @@ async def seed_events(sess: AsyncSession) -> list[Event]:
             detected_at=now,
             centroid=WKTElement(f"POINT({lon} {lat})", srid=4326),
         )
+        ev._seed_lon = lon
+        ev._seed_lat = lat
         sess.add(ev)
         events.append(ev)
     await sess.commit()
@@ -151,7 +178,8 @@ async def seed_reports(sess: AsyncSession, events: list[Event], sources: list[So
     for _ in range(25):
         event = random.choice(events)
         source = random.choice(sources)
-        lon, lat = event.centroid.x, event.centroid.y
+        lon = getattr(event, "_seed_lon", 72.8777)
+        lat = getattr(event, "_seed_lat", 19.0760)
         offset_lon = lon + random.uniform(-0.05, 0.05)
         offset_lat = lat + random.uniform(-0.05, 0.05)
         rep = Report(
