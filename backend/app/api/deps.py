@@ -65,6 +65,7 @@ async def get_current_admin(
     raw_token: str | None = None
     if credentials:
         if credentials.scheme.lower() != "bearer" or not credentials.credentials:
+            print("DEPS 401: Invalid bearer scheme or empty")
             raise AppError(
                 status_code=401,
                 code="unauthorized",
@@ -75,6 +76,7 @@ async def get_current_admin(
     elif isinstance(token, str) and token:
         raw_token = token
     else:
+        print("DEPS 401: No credentials and no token query param")
         raise AppError(
             status_code=401,
             code="unauthorized",
@@ -85,6 +87,7 @@ async def get_current_admin(
     try:
         payload = decode_access_token(raw_token)
     except ExpiredSignatureError:
+        print("DEPS 401: Token expired")
         raise AppError(
             status_code=401,
             code="token_expired",
@@ -92,6 +95,7 @@ async def get_current_admin(
             headers={"WWW-Authenticate": "Bearer"},
         )
     except (InvalidTokenError, PyJWTError):
+        print("DEPS 401: Invalid token")
         raise AppError(
             status_code=401,
             code="invalid_token",

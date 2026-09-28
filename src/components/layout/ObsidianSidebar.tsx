@@ -89,8 +89,8 @@ export default function ObsidianSidebar({
   const { isAdmin } = useAuth();
   const isHindi = i18n.language === 'hi';
 
-  // Guests can only see Overview, Explorer, Analytics, and Citizen Portal
-  const GUEST_ALLOWED_PATHS = ['/', '/explorer', '/analytics', '/report'];
+  // Guests can only see Overview, Explorer, and Citizen Portal
+  const GUEST_ALLOWED_PATHS = ['/', '/explorer', '/report'];
   const visibleNavItems = isAdmin
     ? NAV_ITEMS
     : NAV_ITEMS.filter((item) => GUEST_ALLOWED_PATHS.includes(item.path));
@@ -152,7 +152,7 @@ export default function ObsidianSidebar({
               to={item.path}
               onClick={onCloseMobile}
               className={({ isActive }) => `
-                relative flex items-center justify-between px-3 py-2.5 rounded-xl
+                relative flex items-center justify-between px-4 py-2.5 rounded-xl
                 text-[13px] font-medium transition-all duration-200 group
                 ${
                   isActive
@@ -216,7 +216,7 @@ export default function ObsidianSidebar({
             ONLINE
           </span>
         </div>
-        <p className="text-[10px] text-slate-400 leading-tight">
+        <p className="text-xs text-slate-400 leading-tight">
           Pan-India multi-sensor fusion with automated ML verification.
         </p>
       </div>

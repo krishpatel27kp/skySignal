@@ -1045,10 +1045,74 @@ The final intelligence stage of the streaming pipeline consumes verified, truste
 
 ---
 
+## ✅ Step 18 — Frontend API Client Integration & Mock Data Removal (COMPLETE)
+
+### 1. API Client Architecture (`src/services/apiClient.ts`)
+- **Axios Configuration**: Configured with `baseURL: 'http://localhost:8000/v1'`.
+- **Interceptors**: 
+  - **Request Interceptor**: Automatically injects `Authorization: Bearer <token>` for admin operations and `X-Device-Id` for public anonymous telemetry correlation.
+  - **Response Interceptor**: Catches `401 Unauthorized` and clears stale tokens from `localStorage`, seamlessly logging the user out.
+- **REST Endpoints Implemented**: Full coverage of all backend routes including `/auth`, `/events`, `/reports`, `/reports/batch-sync`, `/duplicate-clusters`, `/analytics`, `/audit-log`, and `/sources`.
+- **SSE Telemetry Hook (`src/hooks/useTelemetryStream.ts`)**: Extracted into a dedicated hook file. Uses standard browser `EventSource` with query parameter token passing (`?token=<jwt>`) to connect to `/v1/events/stream`. Automatically parses SSE JSON payloads into `TelemetryMessage` objects and directly dispatches `skysignal:telemetry` global window events to instantly update the React UI (map markers and KPIs).
+
+### 2. Frontend Component Migrations
+- **Context (`src/context/AuthContext.tsx`)**: Replaced client-side mock JWTs with real authentication via `POST /v1/auth/login`. Added `jwt-decode` integration to cryptographically decode the real returned `access_token`, extracting the `sub`, `email`, and `role` claims to populate the global global user state dynamically.
+- **Service Layer**: `offlineQueue.ts` refactored to use the multipart `submitReport` endpoint and bulk `batchSyncReports` JSON array endpoint for delayed queues.
+- **Citizen Portal**: `ReportForm.tsx` leverages `multipart/form-data` to submit text and binary image payloads simultaneously.
+- **Analyst Pages**: `VerificationQueue.tsx`, `DuplicateReview.tsx`, `DashboardPage.tsx`, `EventExplorer.tsx`, and `Overview.tsx` all fully migrated to fetch live backend data (`PaginatedResponse`) on component mount and handle loading states appropriately.
+
+### 3. API Contract Reconciliation
+- **Auth Endpoint**: Corrected expectation from `POST /v1/auth/analyst-login` to `POST /v1/auth/login`.
+- **Event Lifecycle Endpoints**: Replaced the generic `PATCH /v1/events/:id/lifecycle` with specific semantic endpoints: `POST /v1/events/{id}/verify`, `POST /v1/events/{id}/reject`, and `POST /v1/events/{id}/escalate`. `EventDetailSheet.tsx` action buttons ("Verify", "Escalate", "Reject") mapped directly to these new specific POST routes.
+- **Duplicate Cluster Merge**: Corrected the route from `POST /v1/reports/clusters/:id/merge` to `POST /v1/duplicate-clusters/{id}/merge` and ensured the payload conforms strictly to `{ "with_cluster_id": "<uuid>" }` in `apiClient.ts` and `DuplicateReview.tsx`.
+- **Granular Analytics**: Refactored `Analytics.tsx` to stop expecting a monolith `/stats` payload. Instead, implemented concurrent `Promise.all()` fetching across `GET /v1/analytics/timeseries`, `GET /v1/analytics/by-category`, `GET /v1/analytics/source-reliability`, and the newly added `GET /v1/analytics/status-breakdown` to populate the `recharts` React visuals and UI components seamlessly.
+
+### 4. Mock Data Deprecation
+- Completely deleted `src/services/mockApi.ts` and `src/lib/mockData.ts`.
+- Retained `src/data/mock.ts` strictly for UI structural constants (`CATEGORY_CONFIG`, `SEVERITY_CONFIG`) and visual fallback widgets (e.g., source reliability progress bars).
+- Verified comprehensive `tsc --noEmit` build succeeding with zero broken imports or type mismatches.
+
+---
+
 ## ⏳ Project Status: Complete ✅
+---
 
-Frontend SPA, FastAPI backend architecture, container definitions, PostgreSQL/PostGIS spatial schema, Kafka topic streaming, MinIO storage, RBAC security boundaries, public API endpoints with strict data scoping, 4-stage Kafka workers pipeline, PostGIS ST_DWithin event fusion engine, and real-time SSE telemetry push notifications are fully implemented, verified, and documented.
+## ✅ Step 19 — Alembic Migrations & Database Seeding
+
+### 1. Alembic Initialization & Configuration
+- **Async & Spatial Setup**: Configured `alembic/env.py` to support asynchronous SQLAlchemy (`ext.asyncio`).
+- **GeoAlchemy2 Integration**: Injected `alembic_helpers` into `context.configure()` (`include_object`, `process_revision_directives`, `render_item`) to ensure PostGIS spatial indexes and columns are not accidentally dropped or misconfigured during auto-generation.
+
+### 2. Migration Commands
+- **Generate Initial Migration**: `alembic revision --autogenerate -m "Initial PostGIS schema"`
+- **Apply Migration (Deploy to PostgreSQL)**: `alembic upgrade head`
+
+### 3. Database Seeding
+- Created `scripts/seed.py`, an asynchronous Python script that bootstraps the initial admin state.
+- **Seeding Command**: `python scripts/seed.py` (Must be run from the backend directory with `PYTHONPATH=.`).
+- Verifies existence of the demo user (`analyst@imd.gov.in`). If absent, automatically generates a cryptographically hashed `bcrypt` password and inserts the admin profile, ensuring day-one authentication works effortlessly.
 
 
+## ? Step 18 � Live End-to-End Pipeline Execution (COMPLETE)
+- The entire stack was booted using docker compose up -d.
+- A live citizen report was submitted via POST /v1/reports simulating the React frontend.
+- The report successfully flowed through all 4 Kafka stages: aw.citizen -> 
+ormalized.reports -> processed.dedup -> processed.classified -> weather.events.
+- The PostGIS ST_DWithin fusion engine successfully linked the report to a weather event.
+- The Redis Pub/Sub successfully emitted the event_updated payload, updating the React frontend Leaflet map without mock data.
 
 
+---
+
+## 📍 Step 20 - Reverse Geocoding Integration (COMPLETE)
+
+### 1. Geocoding Service (pp/services/geocoding_service.py)
+- **Nominatim API:** Created an asynchronous utility using httpx to call the OpenStreetMap Nominatim API (/reverse).
+- **User-Agent Requirement:** Strictly sets the User-Agent header (SkySignal-SIH26069-App/1.0) to comply with Nominatim's usage policy.
+- **Data Extraction & Fallbacks:** Parses the JSON response to extract city, falling back gracefully to 	own, district, or county if the precise city name is missing. Also extracts the state.
+- **Non-Blocking Resilience:** Wrapped in a robust try/except block with a 5.0-second timeout. If the API times out or fails, it safely returns (None, None) ensuring that the critical citizen report ingestion path is never blocked.
+
+### 2. Ingestion Pipeline Hook (pp/api/v1/reports.py)
+- **Pre-Persistence Injection:** In the POST /v1/reports endpoint, right after normalizing the citizen payload into a CanonicalReport, we check if city and state are missing but lat and lon are present.
+- **Async Await:** If coordinates exist, we wait reverse_geocode(lat, lon) without blocking the main event loop.
+- **Payload Enhancement:** The dynamically fetched city and state are assigned directly to the CanonicalReport payload before it is handed off to ingest_report(). This ensures the database record and the subsequent aw.citizen Kafka message both contain the rich geographic metadata.

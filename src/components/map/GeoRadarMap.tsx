@@ -127,11 +127,14 @@ export default function GeoRadarMap({
     clusterGroupRef.current = clusterGroup;
     mapInstanceRef.current = map;
 
-    setTimeout(() => {
-      map.invalidateSize();
+    const sizeTimer = setTimeout(() => {
+      if (mapInstanceRef.current === map) {
+        map.invalidateSize();
+      }
     }, 250);
 
     return () => {
+      clearTimeout(sizeTimer);
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -351,14 +354,14 @@ export default function GeoRadarMap({
             </button>
           </div>
 
-          {/* Atmospheric Theme Toggle */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200 text-[10px] font-bold">
+          {/* Atmospheric Theme Toggle - Distinct visual grouping (Issue 11) */}
+          <div className="flex items-center rounded-xl bg-slate-800 p-0.5 border border-slate-700 text-[10px] font-bold shadow-md ml-2">
             <button
               onClick={() => setActiveTheme('dark')}
               className={`px-2.5 py-1 rounded-lg transition-colors ${
                 activeTheme === 'dark'
-                  ? 'bg-slate-900 text-sky-400 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-black text-sky-400 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Obsidian Dark
@@ -367,8 +370,8 @@ export default function GeoRadarMap({
               onClick={() => setActiveTheme('light')}
               className={`px-2.5 py-1 rounded-lg transition-colors ${
                 activeTheme === 'light'
-                  ? 'bg-white text-sky-700 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-slate-700 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Voyager Light
@@ -450,7 +453,7 @@ export default function GeoRadarMap({
           <span className="text-[11px] font-bold">
             {displayEvents.length} Clustered Pins
           </span>
-          <span className="text-slate-500 text-[10px]">· India [20.59°N, 78.96°E]</span>
+          <span className="text-slate-500 text-xs">· India [20.59°N, 78.96°E]</span>
         </div>
       </div>
     </div>

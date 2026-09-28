@@ -1,0 +1,36 @@
+import asyncio
+import uuid
+import logging
+from sqlalchemy import select
+from app.db.session import async_session
+from app.models.admin import AdminUser
+from app.core.security import hash_password
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+async def seed_db() -> None:
+    logger.info("Initializing database session...")
+    async with async_session() as session:
+        # Check if the demo analyst exists
+        demo_email = "analyst@imd.gov.in"
+        stmt = select(AdminUser).where(AdminUser.email == demo_email)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            logger.info(f"Demo analyst '{demo_email}' not found. Creating...")
+            demo_user = AdminUser(
+                id=uuid.uuid4(),
+                email=demo_email,
+                role="senior_admin",
+                password_hash=hash_password("Analyst@123")
+            )
+            session.add(demo_user)
+            await session.commit()
+            logger.info("✅ SUCCESS: Demo analyst credentials created (analyst@imd.gov.in / Analyst@123)")
+        else:
+            logger.info(f"✅ SUCCESS: Demo analyst '{demo_email}' already exists.")
+
+if __name__ == "__main__":
+    asyncio.run(seed_db())

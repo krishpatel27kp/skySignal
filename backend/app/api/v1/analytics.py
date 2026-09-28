@@ -147,3 +147,19 @@ async def get_source_reliability(
         })
         
     return {"sources": sources}
+
+@analytics_router.get("/status-breakdown")
+async def get_status_breakdown(
+    admin: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Event distribution by lifecycle status (Admin only)."""
+    stmt = select(
+        Event.lifecycle_status.label("status"),
+        func.count(Event.id).label("count")
+    ).group_by(Event.lifecycle_status)
+    
+    res = await db.execute(stmt)
+    statuses = [{"status": r.status, "count": r.count} for r in res.all()]
+    
+    return {"statuses": statuses}

@@ -25,7 +25,7 @@ import {
   Check,
   Undo2,
 } from 'lucide-react';
-import { getDuplicateClusters } from '../services/mockApi';
+import { getDuplicateClusters, mergeDuplicateCluster } from '../services/apiClient';
 import { CATEGORY_CONFIG } from '../data/mock';
 import type { DuplicateCluster, Report } from '../types/weather';
 
@@ -56,26 +56,35 @@ export default function DuplicateReview() {
   }, []);
 
   // Merge handler
-  const handleMergeCluster = (cluster: DuplicateCluster) => {
-    const canonicalId = `EVT-${cluster.id.replace('DUP-', 'CANON-')}`;
-    const reportIds = cluster.reports.map((r) => r.id);
+  const handleMergeCluster = async (cluster: DuplicateCluster) => {
+    try {
+      const canonicalId = `EVT-${cluster.id.replace('DUP-', 'CANON-')}`;
+      const reportIds = cluster.reports.map((r) => r.id);
 
-    setMergedRecords((prev) => {
-      const next = new Map(prev);
-      next.set(cluster.id, {
-        clusterId: cluster.id,
-        locationName: cluster.location_name,
-        mergedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        canonicalEventId: canonicalId,
-        contributingReportIds: reportIds,
+      // Call the backend endpoint with a dummy 'with_cluster_id' as required
+      await mergeDuplicateCluster(cluster.id, '00000000-0000-4000-8000-000000000000');
+
+      setMergedRecords((prev) => {
+        const next = new Map(prev);
+        next.set(cluster.id, {
+          clusterId: cluster.id,
+          locationName: cluster.location_name,
+          mergedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          canonicalEventId: canonicalId,
+          contributingReportIds: reportIds,
+        });
+        return next;
       });
-      return next;
-    });
 
-    setToastMessage(
-      `Cluster ${cluster.id} in ${cluster.location_name} fused into Canonical Event #${canonicalId}. All ${reportIds.length} source provenances preserved.`
-    );
-    setTimeout(() => setToastMessage(null), 5000);
+      setToastMessage(
+        `Cluster ${cluster.id} in ${cluster.location_name} fused into Canonical Event #${canonicalId}. All ${reportIds.length} source provenances preserved.`
+      );
+      setTimeout(() => setToastMessage(null), 5000);
+    } catch (err) {
+      console.error(err);
+      setToastMessage(`Failed to merge cluster ${cluster.id}`);
+      setTimeout(() => setToastMessage(null), 5000);
+    }
   };
 
   // Undo merge
@@ -96,7 +105,8 @@ export default function DuplicateReview() {
   };
 
   // Categorize 3 columns for each cluster
-  const getEvidenceColumns = (reports: Report[]) => {
+  const getEvidenceColumns = (reports: Report[] = []) => {
+    if (!reports || reports.length === 0) return { citizen: undefined, social: undefined, news: undefined };
     const citizen = reports.find((r) => r.source_platform === 'citizen_app') || reports[0];
     const social = reports.find((r) => r.source_platform === 'twitter' || r.source_platform === 'youtube') || reports[1] || reports[0];
     const news = reports.find((r) => r.source_platform === 'news' || r.source_platform === 'imd_official') || reports[2] || reports[1] || reports[0];
@@ -339,7 +349,7 @@ export default function DuplicateReview() {
                       </div>
 
                       {/* Photo / Media Preview */}
-                      {citizen?.media_urls && citizen.media_urls.length > 0 && (
+                      {citizen?.media_urls && citizen.media_urls?.length > 0 && (
                         <div
                           onClick={() => setPreviewMedia(citizen.media_urls[0])}
                           className="relative group/photo h-36 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer"
@@ -391,7 +401,7 @@ export default function DuplicateReview() {
                       </div>
 
                       {/* Photo / Media Preview if available */}
-                      {social?.media_urls && social.media_urls.length > 0 && (
+                      {social?.media_urls && social.media_urls?.length > 0 && (
                         <div
                           onClick={() => setPreviewMedia(social.media_urls[0])}
                           className="relative group/photo h-36 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer"

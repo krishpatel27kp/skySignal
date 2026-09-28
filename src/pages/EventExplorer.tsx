@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import GeoRadarMap from '../components/map/GeoRadarMap';
 import EventDetailDrawer from '../components/events/EventDetailDrawer';
-import { mockWeatherEvents } from '../lib/mockData';
+import { getEvents } from '../services/apiClient';
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../data/mock';
 import { useAuth } from '../context/AuthContext';
 import type { WeatherEvent, WeatherCategory, Severity, LifecycleStatus } from '../types/weather';
@@ -76,6 +76,14 @@ export default function EventExplorer() {
   // View Mode: 'split' (Split Map & Dense Grid) vs 'table' (Full Directory Table)
   const [viewMode, setViewMode] = useState<ViewModeOption>('split');
   const [selectedEvent, setSelectedEvent] = useState<WeatherEvent | null>(null);
+  const [allEvents, setAllEvents] = useState<WeatherEvent[]>([]);
+
+  // Fetch events from live backend on mount
+  useEffect(() => {
+    getEvents(undefined, { limit: 100 })
+      .then((res) => setAllEvents(res.results))
+      .catch((err) => console.error('Failed to load events:', err));
+  }, []);
 
   // Keyboard shortcut '/' to focus search input
   useEffect(() => {
@@ -103,13 +111,13 @@ export default function EventExplorer() {
 
   // Filtered Events
   const filteredEvents = useMemo(() => {
-    return mockWeatherEvents.filter((evt) => {
+    return allEvents.filter((evt) => {
       // 1. Text Search
       if (search.trim()) {
         const q = search.toLowerCase();
-        const matchTitle = evt.title.toLowerCase().includes(q);
-        const matchCity = evt.city.toLowerCase().includes(q);
-        const matchState = evt.state.toLowerCase().includes(q);
+        const matchTitle = (evt.title || '').toLowerCase().includes(q);
+        const matchCity = (evt.city || '').toLowerCase().includes(q);
+        const matchState = (evt.state || '').toLowerCase().includes(q);
         const matchId = evt.id.toLowerCase().includes(q);
         if (!matchTitle && !matchCity && !matchState && !matchId) return false;
       }
@@ -122,7 +130,7 @@ export default function EventExplorer() {
       // 3. Region Filter
       if (selectedRegion !== 'all') {
         const targetStates = REGION_MAP[selectedRegion];
-        const stateLower = evt.state.toLowerCase();
+        const stateLower = (evt.state || '').toLowerCase();
         if (!targetStates.some((s) => stateLower.includes(s))) {
           return false;
         }
@@ -461,7 +469,7 @@ export default function EventExplorer() {
         <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
           <span>
             Matched <strong className="text-slate-800">{filteredEvents.length}</strong> of{' '}
-            {mockWeatherEvents.length} national weather incidents
+            {allEvents.length} national weather incidents
           </span>
           <span className="font-mono text-[10px]">
             Spatial Engine: PostGIS + Leaflet MarkerCluster

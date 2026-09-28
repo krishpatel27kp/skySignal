@@ -1,14 +1,17 @@
 /* ═══════════════════════════════════════════════════════
    SkySignal 2.0 — Authentication Context
-   Manages analyst authorization, mock JWT token & session state
+   Manages analyst authorization via real FastAPI backend JWT
    ═══════════════════════════════════════════════════════ */
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { jwtDecode } from 'jwt-decode';
+import { loginAdmin, getMe } from '../services/apiClient';
 
 export interface AnalystUser {
+  id: string;
   email: string;
-  name: string;
   role: string;
+  name: string;
   badge: string;
   token: string;
 }
@@ -37,53 +40,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem(STORAGE_TOKEN_KEY);
-      const storedUser = localStorage.getItem(STORAGE_USER_KEY);
-      if (storedToken && storedUser) {
+      if (storedToken) {
+        // Decode token to verify and restore user state
+        const decoded = jwtDecode<{ sub: string; email: string; role: string; exp: number }>(storedToken);
+        
+        // Basic check if token is expired (jwt-decode gives exp in seconds)
+        if (decoded.exp * 1000 < Date.now()) {
+          throw new Error('Token expired');
+        }
+
+        const userName = decoded.email.includes('sharma')
+          ? 'Dr. Rajesh Sharma'
+          : decoded.email.includes('priya')
+          ? 'Priya Narang'
+          : 'Duty Analyst';
+
+        const displayRole = decoded.role === 'senior_admin' || decoded.email.includes('sharma')
+          ? 'Senior Duty Forecaster'
+          : 'Meteorological Triage Officer';
+
         setIsAdmin(true);
-        setUser(JSON.parse(storedUser));
+        setUser({
+          id: decoded.sub,
+          email: decoded.email,
+          role: displayRole,
+          name: userName,
+          badge: 'IMD National Radar HQ',
+          token: storedToken,
+        });
+
+        // Optionally, verify token is still valid with backend
+        getMe().catch(() => {
+          localStorage.removeItem(STORAGE_TOKEN_KEY);
+          setIsAdmin(false);
+          setUser(null);
+        });
       }
     } catch (e) {
       console.warn('Failed to parse cached auth state:', e);
       localStorage.removeItem(STORAGE_TOKEN_KEY);
-      localStorage.removeItem(STORAGE_USER_KEY);
+      setIsAdmin(false);
+      setUser(null);
     }
   }, []);
 
-  const login = async (email: string, _password?: string): Promise<void> => {
-    // Generate realistic mock JWT
-    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-    const payload = btoa(
-      JSON.stringify({
-        sub: email,
-        iss: 'imd.gov.in/skysignal-auth',
-        role: 'meteorological_analyst',
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 86400,
-      })
-    );
-    const signature = 'c2t5c2lnbmFsX3NpZ2hhdHVyZV8yMDI2';
-    const mockToken = `${header}.${payload}.${signature}`;
+  const login = async (email: string, password?: string): Promise<void> => {
+    // Call real backend /v1/auth/login
+    const response = await loginAdmin({
+      email,
+      password: password || '',
+    });
 
-    const userName = email.includes('sharma')
+    const decoded = jwtDecode<{ sub: string; email: string; role: string }>(response.token);
+
+    const userName = decoded.email.includes('sharma')
       ? 'Dr. Rajesh Sharma'
-      : email.includes('priya')
+      : decoded.email.includes('priya')
       ? 'Priya Narang'
       : 'Duty Analyst';
 
-    const userRole = email.includes('sharma')
+    const displayRole = decoded.role === 'senior_admin' || decoded.email.includes('sharma')
       ? 'Senior Duty Forecaster'
       : 'Meteorological Triage Officer';
 
     const userProfile: AnalystUser = {
-      email,
+      id: decoded.sub,
+      email: decoded.email,
+      role: displayRole,
       name: userName,
-      role: userRole,
       badge: 'IMD National Radar HQ',
-      token: mockToken,
+      token: response.token,
     };
 
-    localStorage.setItem(STORAGE_TOKEN_KEY, mockToken);
-    localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(userProfile));
+    localStorage.setItem(STORAGE_TOKEN_KEY, response.token);
 
     setIsAdmin(true);
     setUser(userProfile);
@@ -91,7 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem(STORAGE_TOKEN_KEY);
-    localStorage.removeItem(STORAGE_USER_KEY);
     setIsAdmin(false);
     setUser(null);
   };

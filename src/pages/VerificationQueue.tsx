@@ -26,7 +26,7 @@ import {
   Radio,
   Filter,
 } from 'lucide-react';
-import { getReports, bulkActionReports } from '../services/mockApi';
+import { getReports, bulkActionReports } from '../services/apiClient';
 import { CATEGORY_CONFIG } from '../data/mock';
 import type { Report, WeatherCategory } from '../types/weather';
 
@@ -61,8 +61,8 @@ export default function VerificationQueue() {
   // Load reports
   const fetchReports = async () => {
     setLoading(true);
-    const data = await getReports();
-    setReports(data);
+    const data = await getReports(undefined, { limit: 100 });
+    setReports(data.results);
     setLoading(false);
   };
 
@@ -563,7 +563,7 @@ export default function VerificationQueue() {
                 {/* Right Column: Media preview thumbnail + Quick Actions */}
                 <div className="flex items-center gap-3 self-end lg:self-center shrink-0">
                   {/* Media Thumbnail with Lightbox click */}
-                  {report.media_urls.length > 0 && (
+                  {report.media_urls?.length > 0 && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -756,13 +756,13 @@ export default function VerificationQueue() {
                 </div>
 
                 {/* Attached Media */}
-                {evidenceReport.media_urls.length > 0 && (
+                {evidenceReport.media_urls?.length > 0 && (
                   <div>
                     <span className="text-[11px] font-bold text-slate-600 block mb-2">
-                      Attached Evidence Photos ({evidenceReport.media_urls.length})
+                      Attached Evidence Photos ({evidenceReport.media_urls?.length})
                     </span>
                     <div className="grid grid-cols-2 gap-3">
-                      {evidenceReport.media_urls.map((url, i) => (
+                      {evidenceReport.media_urls?.map((url, i) => (
                         <img
                           key={i}
                           src={url}

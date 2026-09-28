@@ -7,7 +7,7 @@
    ═══════════════════════════════════════════════════════ */
 
 import { useState } from 'react';
-import { useMockTelemetry } from '../../services/mockApi';
+import { useTelemetryStream } from '../../hooks/useTelemetryStream';
 import { X, MapPin, ExternalLink, Radio } from 'lucide-react';
 import type { TelemetryMessage, WeatherEvent } from '../../types/weather';
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../../data/mock';
@@ -19,19 +19,11 @@ interface TelemetryToastProps {
 export default function TelemetryToast({ onSelectEvent }: TelemetryToastProps) {
   const [activeToast, setActiveToast] = useState<TelemetryMessage | null>(null);
 
-  // Subscribe to real-time mock telemetry stream
-  useMockTelemetry({
+  // Subscribe to real-time SSE telemetry stream
+  useTelemetryStream({
     enabled: true,
-    intervalMs: 14_000,
     onMessage: (message: TelemetryMessage) => {
       setActiveToast(message);
-
-      // Broadcast event to entire window for live map & counter auto-updates
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('skysignal:telemetry', { detail: message })
-        );
-      }
 
       // Auto-dismiss after 6 seconds
       const timer = setTimeout(() => {

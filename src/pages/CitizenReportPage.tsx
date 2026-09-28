@@ -22,9 +22,9 @@ import {
   Languages,
   Check,
 } from 'lucide-react';
-import { submitReport } from '../services/mockApi';
+import { submitReport } from '../services/apiClient';
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../data/mock';
-import type { WeatherCategory, Severity, ReportSubmission } from '../types/weather';
+import type { WeatherCategory, Severity } from '../types/weather';
 
 interface LocalHistoryItem {
   id: string;
@@ -156,20 +156,14 @@ export default function CitizenReportPage() {
     if (!description.trim()) return;
 
     setIsSubmitting(true);
-    const submission: ReportSubmission = {
+
+    const newReport = await submitReport({
       event_category: category,
-      severity,
+      location_method: lat && lon ? 'gps' : 'manual',
+      description: description,
       lat,
       lon,
-      city: city || 'New Delhi',
-      state: state || 'Delhi NCR',
-      raw_text: description,
-      media_urls: mediaUrls,
-      device_id: 'citizen-mobile-client-' + Math.floor(Math.random() * 10000),
-      language: lang,
-    };
-
-    const newReport = await submitReport(submission);
+    });
 
     // Save to history
     const historyItem: LocalHistoryItem = {

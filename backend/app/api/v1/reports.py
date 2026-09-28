@@ -77,6 +77,13 @@ async def submit_report(
         device_id=session.device_id,
     )
 
+    # Reverse geocode if lat/lon exist but city/state are missing
+    if not canonical.city and not canonical.state and canonical.lat is not None and canonical.lon is not None:
+        from app.services.geocoding_service import reverse_geocode
+        city, state = await reverse_geocode(canonical.lat, canonical.lon)
+        canonical.city = city
+        canonical.state = state
+
     # Run the full pipeline: DLQ, idempotency, DB persistence, Redis stream
     report, result = await ingest_report(canonical, db)
 

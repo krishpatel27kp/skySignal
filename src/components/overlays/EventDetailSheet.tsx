@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../../data/mock';
+import { verifyEvent, escalateEvent, rejectEvent } from '../../services/apiClient';
 import type { WeatherCategory, Severity, LifecycleStatus, WeatherEvent } from '../../types/weather';
 
 interface EventDetailSheetProps {
@@ -89,23 +90,50 @@ export default function EventDetailSheet({
     setTimeout(() => setActionToast(null), 4000);
   };
 
-  // Admin Action Handlers
-  const handlePromoteLifecycle = () => {
-    const nextIndex = Math.min(LIFECYCLE_STAGES.length - 1, currentStageIndex + 1);
-    const nextStage = LIFECYCLE_STAGES[nextIndex];
-    setCurrentStatus(nextStage);
-    onStatusChange?.(event.id, nextStage);
-    triggerToast(`Event ${event.id} lifecycle advanced to "${nextStage.toUpperCase()}".`);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Admin Action Handlers (Wired to Real API Endpoints)
+  const handleVerify = async () => {
+    try {
+      setIsSubmitting(true);
+      const res = await verifyEvent(event.id);
+      setCurrentStatus(res.status as LifecycleStatus);
+      onStatusChange?.(event.id, res.status as LifecycleStatus);
+      triggerToast(`Event ${event.id} verified successfully.`);
+    } catch (err) {
+      console.error(err);
+      triggerToast('Failed to verify event.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleMergeEvent = () => {
-    triggerToast(`Event ${event.id} marked for canonical fusion review in /duplicates.`);
+  const handleEscalate = async () => {
+    try {
+      setIsSubmitting(true);
+      await escalateEvent(event.id, 'Escalated from EventDetailSheet');
+      triggerToast(`Event ${event.id} flagged for senior attention.`);
+    } catch (err) {
+      console.error(err);
+      triggerToast('Failed to escalate event.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleInvalidateEvent = () => {
-    setCurrentStatus('resolved');
-    onStatusChange?.(event.id, 'resolved');
-    triggerToast(`Event ${event.id} invalidated and marked as Resolved / False Alarm.`);
+  const handleReject = async () => {
+    try {
+      setIsSubmitting(true);
+      const res = await rejectEvent(event.id);
+      setCurrentStatus('resolved'); // Assume reject resolves/invalidates it
+      onStatusChange?.(event.id, 'resolved');
+      triggerToast(`Event ${event.id} rejected and invalidated.`);
+    } catch (err) {
+      console.error(err);
+      triggerToast('Failed to reject event.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const sheetContent = (
@@ -471,30 +499,33 @@ export default function EventDetailSheet({
 
               <div className="grid grid-cols-3 gap-2">
                 <button
-                  onClick={handlePromoteLifecycle}
-                  className="px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-bold shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                  title="Advance event lifecycle stage"
+                  onClick={handleVerify}
+                  disabled={isSubmitting}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Confirm and verify event"
+                >
+                  <ShieldCheck size={13} />
+                  <span>Verify</span>
+                </button>
+
+                <button
+                  onClick={handleEscalate}
+                  disabled={isSubmitting}
+                  className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[11px] font-bold shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Flag for senior attention"
                 >
                   <TrendingUp size={13} />
-                  <span>Promote</span>
+                  <span>Escalate</span>
                 </button>
 
                 <button
-                  onClick={handleMergeEvent}
-                  className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[11px] font-bold shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                  title="Merge into duplicate cluster"
-                >
-                  <GitMerge size={13} />
-                  <span>Merge</span>
-                </button>
-
-                <button
-                  onClick={handleInvalidateEvent}
-                  className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  onClick={handleReject}
+                  disabled={isSubmitting}
+                  className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold shadow-xs transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
                   title="Invalidate as false positive"
                 >
                   <Ban size={13} />
-                  <span>Invalidate</span>
+                  <span>Reject</span>
                 </button>
               </div>
             </div>

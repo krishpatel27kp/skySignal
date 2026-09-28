@@ -28,6 +28,8 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+from geoalchemy2 import alembic_helpers
+
 def run_migrations_offline() -> None:
     """Generate SQL scripts without connecting to the DB."""
     context.configure(
@@ -35,6 +37,9 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=alembic_helpers.include_object,
+        process_revision_directives=alembic_helpers.writer,
+        render_item=alembic_helpers.render_item,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -42,7 +47,13 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection):  # type: ignore[no-untyped-def]
     """Execute migrations on a live connection."""
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=alembic_helpers.include_object,
+        process_revision_directives=alembic_helpers.writer,
+        render_item=alembic_helpers.render_item,
+    )
     with context.begin_transaction():
         context.run_migrations()
 

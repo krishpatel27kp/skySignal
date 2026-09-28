@@ -44,34 +44,7 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ) -> LoginResponse:
     """Validate credentials and issue JWT bearer token."""
-    # 1. Check hardcoded demo credentials for analyst@imd.gov.in
-    if payload.email.lower() == "analyst@imd.gov.in" and payload.password == "Analyst@123":
-        demo_user_id = uuid.UUID("00000000-0000-4000-8000-000000000001")
-        demo_user = AdminUser(
-            id=demo_user_id,
-            email="analyst@imd.gov.in",
-            role="analyst",
-            password_hash=hash_password("Analyst@123"),
-        )
-        token, expires_at = create_access_token(
-            data={
-                "sub": str(demo_user_id),
-                "email": demo_user.email,
-                "role": demo_user.role,
-            }
-        )
-        return LoginResponse(
-            token=token,
-            expires_at=expires_at,
-            user=AdminUserOut(
-                id=demo_user_id,
-                email="analyst@imd.gov.in",
-                role="analyst",
-                created_at=datetime.now(timezone.utc),
-            ),
-        )
-
-    # 2. Database user credential lookup
+    # 1. Database user credential lookup
     stmt = select(AdminUser).where(AdminUser.email == payload.email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()

@@ -5,8 +5,8 @@
    ═══════════════════════════════════════════════════════ */
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { submitReport } from '../services/mockApi';
-import type { WeatherCategory, Severity, ReportSubmission } from '../types/weather';
+import { submitReport, batchSyncReports } from '../services/apiClient';
+import type { WeatherCategory, Severity } from '../types/weather';
 
 export interface QueuedReport {
   client_report_id: string; // UUID
@@ -141,20 +141,14 @@ export async function flushOfflineQueue(
       const delayMs = Date.now() - new Date(item.created_at).getTime();
       const isLate = delayMs > 5 * 60_000; // >5 minutes delayed sync
 
-      const payload: ReportSubmission = {
+      // Use real API — submitReport expects multipart/form-data payload
+      await submitReport({
         event_category: item.event_category,
-        severity: item.severity,
+        location_method: 'manual',
+        description: item.raw_text,
         lat: item.lat,
         lon: item.lon,
-        city: item.city,
-        state: item.state,
-        raw_text: item.raw_text,
-        media_urls: item.media_urls,
-        device_id: item.device_id,
-        language: 'en',
-      };
-
-      await submitReport(payload);
+      });
 
       const updated: QueuedReport = {
         ...item,

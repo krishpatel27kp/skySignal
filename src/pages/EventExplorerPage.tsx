@@ -4,7 +4,7 @@
    High-density filterable radar & multi-dimensional queries
    ═══════════════════════════════════════════════════════ */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   Download,
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import GeoRadarMap from '../components/dashboard/GeoRadarMap';
 import EventDetailDrawer from '../components/events/EventDetailDrawer';
-import { mockWeatherEvents } from '../lib/mockData';
+import { getEvents } from '../services/apiClient';
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../data/mock';
 
 export default function EventExplorerPage() {
@@ -34,8 +34,15 @@ export default function EventExplorerPage() {
   const [sortBy, setSortBy] = useState<'time' | 'severity' | 'confidence' | 'sources'>('time');
   const [viewMode, setViewMode] = useState<'table' | 'map' | 'cards'>('table');
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
-  const [events, setEvents] = useState(mockWeatherEvents);
+  const [events, setEvents] = useState<any[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Fetch events from live backend
+  useEffect(() => {
+    getEvents(undefined, { limit: 100 })
+      .then((res) => setEvents(res.results))
+      .catch((err) => console.error('Failed to load events:', err));
+  }, []);
 
   // Filter options
   const statesList = useMemo(() => {

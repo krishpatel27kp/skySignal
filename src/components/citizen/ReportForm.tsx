@@ -24,9 +24,9 @@ import {
   Check,
 } from 'lucide-react';
 import { queueOfflineReport, getOrCreateDeviceId, type QueuedReport } from '../../lib/offlineQueue';
-import { submitReport } from '../../services/mockApi';
+import { submitReport } from '../../services/apiClient';
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../../data/mock';
-import type { WeatherCategory, Severity, ReportSubmission } from '../../types/weather';
+import type { WeatherCategory, Severity } from '../../types/weather';
 
 interface ReportFormProps {
   onReportSubmitted?: (report: QueuedReport) => void;
@@ -194,21 +194,14 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
 
         onReportSubmitted?.(queued);
       } else {
-        // Online: Submit to API and also store locally in history
-        const submissionPayload: ReportSubmission = {
+        // Online: Submit to real backend via multipart/form-data
+        const apiReport = await submitReport({
           event_category: category,
-          severity,
+          location_method: lat && lon ? 'gps' : 'manual',
+          description: description.trim(),
           lat,
           lon,
-          city: city.trim() || 'Mumbai',
-          state: state.trim() || 'Maharashtra',
-          raw_text: description.trim(),
-          media_urls: mediaUrls,
-          device_id: deviceId,
-          language: isHindi ? 'hi' : 'en',
-        };
-
-        const apiReport = await submitReport(submissionPayload);
+        });
 
         // Also save to indexedDB as synced
         const queued = await queueOfflineReport({
@@ -292,7 +285,7 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
       {/* ── 1. Hazard Category Grid (7 Interactive Icon Tiles) ── */}
       <div>
         <div className="flex items-center justify-between mb-2.5">
-          <label className="text-[13px] font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+          <label className="text-[13px] font-black text-slate-900 flex items-center gap-2">
             <span>1. {isHindi ? 'मौसम आपदा का प्रकार' : 'Hazard Category'}</span>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-bold">
               7 Strict Types
@@ -339,7 +332,7 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
 
       {/* ── 2. Severity Level (Strict 3-Tier) ── */}
       <div>
-        <label className="block text-[13px] font-black text-slate-900 uppercase tracking-wider mb-2">
+        <label className="block text-[13px] font-black text-slate-900 mb-2">
           2. {isHindi ? 'तीव्रता का स्तर' : 'Estimated Impact Severity'}
         </label>
         <div className="grid grid-cols-3 gap-3">
@@ -357,10 +350,10 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
                   ${
                     isSelected
                       ? sev === 'severe'
-                        ? 'border-red-500 bg-red-500 text-white shadow-md ring-2 ring-red-400/40'
+                        ? 'border-red-500 bg-red-50 text-red-700 shadow-md ring-2 ring-red-400/40'
                         : sev === 'moderate'
-                        ? 'border-sky-500 bg-sky-600 text-white shadow-md ring-2 ring-sky-400/40'
-                        : 'border-emerald-500 bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400/40'
+                        ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-md ring-2 ring-sky-400/40'
+                        : 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-md ring-2 ring-emerald-400/40'
                       : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                   }
                 `}
@@ -375,40 +368,34 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
 
       {/* ── 3. Instant GPS Location & Manual Inputs ── */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-[13px] font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[13px] font-black text-slate-900 flex items-center gap-1.5">
             <span>3. {isHindi ? 'घटना का स्थान' : 'Incident Location'}</span>
           </label>
-          <button
-            type="button"
-            onClick={handleGetLocation}
-            disabled={isLocating}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
-          >
-            <Navigation size={13} className={isLocating ? 'animate-spin' : ''} />
-            <span>
-              {isLocating
-                ? isHindi
-                  ? 'जीपीएस खोज रहा है...'
-                  : 'Acquiring GPS...'
-                : isHindi
-                ? 'मेरा जीपीएस स्थान उपयोग करें'
-                : 'Use my GPS location'}
-            </span>
-          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="relative">
-            <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder={isHindi ? 'शहर / इलाका (उदा. बांद्रा, मुंबई)' : 'City / Locality (e.g. Bandra, Mumbai)'}
-              className="w-full pl-10 pr-3.5 py-2.5 text-[12px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900 font-medium"
-              required
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder={isHindi ? 'शहर / इलाका (उदा. बांद्रा, मुंबई)' : 'City / Locality (e.g. Bandra, Mumbai)'}
+                className="w-full pl-10 pr-3.5 py-2.5 text-[12px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900 font-medium"
+                required
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleGetLocation}
+              disabled={isLocating}
+              title={isHindi ? 'मेरा जीपीएस स्थान उपयोग करें' : 'Use my GPS location'}
+              className="flex-shrink-0 flex items-center justify-center w-[42px] h-[42px] bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl transition-colors cursor-pointer shadow-sm"
+            >
+              <Navigation size={16} className={isLocating ? 'animate-spin' : ''} />
+            </button>
           </div>
           <div>
             <input
@@ -432,7 +419,7 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
 
       {/* ── 4. Media Upload Zone (Drag-and-Drop + 10MB limit) ── */}
       <div className="space-y-2">
-        <label className="block text-[13px] font-black text-slate-900 uppercase tracking-wider">
+        <label className="block text-[13px] font-black text-slate-900">
           4. {isHindi ? 'प्रमाण फोटो / वीडियो (अधिकतम 10MB)' : 'Photo / Video Evidence (Max 10MB)'}
         </label>
 
@@ -468,7 +455,7 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
             <span className="text-[12px] font-bold text-slate-800">
               {isHindi ? 'फोटो खींचें या यहाँ खींचकर छोड़ें' : 'Take a photo or drag files here'}
             </span>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-400 mt-0.5">
               Supports JPG, PNG, MP4 up to 10MB per file
             </p>
           </div>
@@ -500,7 +487,7 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
       {/* ── 5. Description Textarea with Character Counter (Max 2,000) ── */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <label className="text-[13px] font-black text-slate-900 uppercase tracking-wider">
+          <label className="text-[13px] font-black text-slate-900">
             5. {isHindi ? 'घटना का विवरण' : 'Ground Observation Narrative'}
           </label>
           <span
@@ -531,8 +518,8 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
         type="submit"
         disabled={isSubmitting}
         className="
-          w-full py-4 px-6 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800
-          text-white rounded-2xl text-[14px] font-extrabold shadow-lg hover:shadow-xl
+          w-full py-2 px-4 bg-sky-600 hover:bg-sky-700
+          text-white rounded-xl text-[13px] font-bold shadow-md
           transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer
         "
       >

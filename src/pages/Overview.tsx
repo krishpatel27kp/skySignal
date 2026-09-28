@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import GeoRadarMap from '../components/map/GeoRadarMap';
 import EventDetailDrawer from '../components/events/EventDetailDrawer';
-import { mockWeatherEvents } from '../lib/mockData';
+import { getEvents } from '../services/apiClient';
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../data/mock';
 import { useAuth } from '../context/AuthContext';
 import type { WeatherEvent } from '../types/weather';
@@ -36,8 +36,15 @@ export default function Overview() {
   const { isAdmin } = useAuth();
   const isHindi = i18n.language === 'hi';
 
-  const [events, setEvents] = useState<WeatherEvent[]>(mockWeatherEvents);
+  const [events, setEvents] = useState<WeatherEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<WeatherEvent | null>(null);
+
+  // Fetch events from live backend on mount
+  useEffect(() => {
+    getEvents(undefined, { limit: 50 })
+      .then((res) => setEvents(res.results))
+      .catch((err) => console.error('Failed to load events:', err));
+  }, []);
 
   // Auto-update active map markers and counters from live telemetry stream
   useEffect(() => {
@@ -112,7 +119,7 @@ export default function Overview() {
         <div className="glass-card p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold text-slate-500">
                 {isHindi ? 'सक्रिय मौसम घटनाएं' : 'Active Weather Events'}
               </span>
               <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
@@ -139,7 +146,7 @@ export default function Overview() {
         <div className="glass-card p-5 rounded-2xl border border-red-200/90 bg-gradient-to-br from-red-50/40 to-white shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-red-700 flex items-center gap-1">
+              <span className="text-xs font-bold text-red-700 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
                 {isHindi ? 'गंभीर मौसम आपदाएं' : 'Severe Hazards'}
               </span>
@@ -154,7 +161,7 @@ export default function Overview() {
 
           <div className="flex items-center justify-between pt-3 border-t border-red-100 text-[11px]">
             <span className="text-red-700 font-bold">Priority Red Alert</span>
-            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-extrabold text-[10px]">
+            <span className="px-1.5 py-0.5 rounded-md bg-red-100 text-red-800 font-extrabold text-[10px] tracking-wide uppercase">
               CRITICAL
             </span>
           </div>
@@ -164,7 +171,7 @@ export default function Overview() {
         <div className="glass-card p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold text-slate-500">
                 {isHindi ? 'सत्यापित रिपोर्ट प्राप्त' : 'Corroborated Reports'}
               </span>
               <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
@@ -189,7 +196,7 @@ export default function Overview() {
         >
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+              <span className="text-xs font-bold text-amber-800">
                 {isHindi ? 'सत्यापन कतार लंबित' : 'Awaiting Verification'}
               </span>
               <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -206,7 +213,7 @@ export default function Overview() {
               <span>Open Triage Queue</span>
               <ArrowRight size={12} />
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px]">
+            <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[10px] tracking-wide uppercase">
               ACTION REQ.
             </span>
           </div>
@@ -283,7 +290,7 @@ export default function Overview() {
                     <div>
                       <div className="flex justify-between text-[10px] font-bold mb-1">
                         <span className="text-slate-500">AI Confidence:</span>
-                        <span className="text-sky-700">{evt.confidence}%</span>
+                        <span className="text-sky-700">{Number(evt.confidence).toFixed(1)}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                         <div
@@ -471,7 +478,7 @@ export default function Overview() {
                       <div className="w-36 space-y-1">
                         <div className="flex justify-between text-[10px] font-bold">
                           <span className="text-slate-500">Confidence</span>
-                          <span className="text-sky-700">{evt.confidence}%</span>
+                          <span className="text-sky-700">{Number(evt.confidence).toFixed(1)}%</span>
                         </div>
                         <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                           <div

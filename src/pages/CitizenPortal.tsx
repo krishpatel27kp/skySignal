@@ -4,7 +4,7 @@
    submissions, offline resilience, and verified community mapping.
    ═══════════════════════════════════════════════════════ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Send,
@@ -20,8 +20,9 @@ import ReportForm from '../components/citizen/ReportForm';
 import MyReportsList from '../components/citizen/MyReportsList';
 import GeoRadarMap from '../components/dashboard/GeoRadarMap';
 import EventDetailDrawer from '../components/events/EventDetailDrawer';
-import { mockWeatherEvents } from '../lib/mockData';
+import { getEvents } from '../services/apiClient';
 import type { QueuedReport } from '../lib/offlineQueue';
+import type { WeatherEvent } from '../types/weather';
 
 type ActiveTab = 'submit' | 'history' | 'map';
 
@@ -32,6 +33,14 @@ export default function CitizenPortal() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('submit');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedMapEvent, setSelectedMapEvent] = useState<any | null>(null);
+  const [mapEvents, setMapEvents] = useState<WeatherEvent[]>([]);
+
+  // Fetch events from live backend for the map
+  useEffect(() => {
+    getEvents(undefined, { limit: 50 })
+      .then((res) => setMapEvents(res.results))
+      .catch((err) => console.error('Failed to load events:', err));
+  }, []);
 
   const handleReportSubmitted = (_report: QueuedReport) => {
     setRefreshTrigger((prev) => prev + 1);
@@ -40,13 +49,13 @@ export default function CitizenPortal() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* ── 1. Hero & Portal Overview Banner ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-900 via-slate-900 to-indigo-950 text-white p-6 sm:p-8 shadow-2xl border border-sky-500/20 animate-fade-in">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-900 via-slate-900 to-indigo-950 text-white p-4 sm:p-6 shadow-2xl border border-sky-500/20 animate-fade-in">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-sky-500/15 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 -mb-10 w-48 h-48 rounded-full bg-cyan-400/10 blur-2xl pointer-events-none" />
 
         <div className="relative z-10 space-y-3 max-w-2xl">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 font-extrabold text-[11px] border border-sky-400/30 flex items-center gap-1.5">
+            <span className="px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 font-extrabold text-xs border border-sky-400/30 flex items-center gap-1.5">
               <Radio size={13} className="animate-pulse" />
               <span>{isHindi ? 'राष्ट्रीय मौसम रडार सहयोग' : 'National Weather Radar Ingestion'}</span>
             </span>
@@ -56,7 +65,7 @@ export default function CitizenPortal() {
             </span>
           </div>
 
-          <h1 className="text-[24px] sm:text-[30px] font-black tracking-tight leading-tight font-['Outfit']">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight font-['Outfit']">
             {isHindi
               ? 'आपकी जानकारी से फर्क पड़ता है — स्थानीय मौसम की रिपोर्ट आईएमडी को भेजें।'
               : 'Your observation makes a difference — Report local weather incidents to IMD.'}
@@ -171,7 +180,7 @@ export default function CitizenPortal() {
           </div>
 
           <GeoRadarMap
-            events={mockWeatherEvents}
+            events={mapEvents}
             onSelectEvent={setSelectedMapEvent}
             height="h-[560px]"
           />

@@ -21,7 +21,7 @@ import {
   Eye,
   X,
 } from 'lucide-react';
-import { getReports, bulkActionReports } from '../services/mockApi';
+import { getReports, bulkActionReports } from '../services/apiClient';
 import { CATEGORY_CONFIG } from '../data/mock';
 import type { Report } from '../types/weather';
 
@@ -40,8 +40,8 @@ export default function VerificationQueuePage() {
   // Load reports
   const fetchReports = async () => {
     setLoading(true);
-    const data = await getReports();
-    setReports(data);
+    const data = await getReports(undefined, { limit: 100 });
+    setReports(data.results);
     setLoading(false);
   };
 
@@ -437,7 +437,7 @@ export default function VerificationQueuePage() {
 
                 {/* Right: Media thumbnail + Direct action */}
                 <div className="flex items-center gap-3 self-end md:self-center shrink-0">
-                  {report.media_urls.length > 0 && (
+                  {report.media_urls?.length > 0 && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

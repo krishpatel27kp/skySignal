@@ -267,10 +267,10 @@ export default function MyReportsList({ refreshTrigger }: MyReportsListProps) {
                     </span>
                   </div>
 
-                  {report.media_urls.length > 0 && (
+                  {report.media_urls?.length > 0 && (
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-slate-400 font-bold uppercase">Evidence:</span>
-                      {report.media_urls.map((url, idx) => (
+                      {report.media_urls?.map((url, idx) => (
                         <img
                           key={idx}
                           src={url}

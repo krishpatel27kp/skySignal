@@ -21,7 +21,7 @@ class ReportResponse(BaseModel):
     source_platform: str
     source_handle: Optional[str] = None
     raw_text: Optional[str] = None
-    media: list[MediaItemResponse] = Field(default_factory=list)
+    media_urls: list[str] = Field(default_factory=list)
     lat: Optional[float] = None
     lon: Optional[float] = None
     city: Optional[str] = None

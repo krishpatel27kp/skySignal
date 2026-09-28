@@ -7,7 +7,14 @@
    Chart 4: Regional Incident Heatmap matrix
    ═══════════════════════════════════════════════════════ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import {
+  getTimeseries,
+  getByCategory,
+  getSourceReliability,
+  getStatusBreakdown,
+  getDashboardStats
+} from '../services/apiClient';
 import {
   BarChart3,
   TrendingUp,
@@ -128,6 +135,113 @@ const HEATMAP_DATA: HeatmapRow[] = [
 export default function Analytics() {
   const [timeFilter, setTimeFilter] = useState<'24h' | '7d' | '30d'>('24h');
 
+  // State for fetched analytics data
+  const [loading, setLoading] = useState(true);
+  const [timeseriesData, setTimeseriesData] = useState<any[]>(HOURLY_INGESTION_DATA);
+  const [categoryData, setCategoryData] = useState<any[]>(HAZARD_DISTRIBUTION);
+  const [sourceData, setSourceData] = useState<any[]>(SOURCE_RELIABILITY);
+  const [statusData, setStatusData] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchAnalytics() {
+      try {
+        setLoading(true);
+        const [
+          timeseries,
+          category,
+          source,
+          status,
+          stats
+        ] = await Promise.all([
+          getTimeseries(timeFilter === '24h' ? 'hour' : 'day'),
+          getByCategory(),
+          getSourceReliability(),
+          getStatusBreakdown(),
+          getDashboardStats(),
+        ]);
+
+        if (timeseries.series) {
+          const formattedSeries = timeseries.series.map((s: any) => {
+            // Convert '2026-09-27 12:00:00' or similar to just the time part, or keep as is
+            const t = s.date.includes(' ') ? s.date.split(' ')[1].substring(0, 5) : s.date;
+            return {
+              time: t,
+              unverified: s.reports || 0,
+              verified: s.events || 0
+            };
+          });
+          setTimeseriesData(formattedSeries);
+        }
+
+        if (category.categories) {
+          const total = category.categories.reduce((acc: number, c: any) => acc + (c.count || 0), 0);
+          const formattedCategories = category.categories.map((c: any) => {
+            const catLower = (c.category || '').toLowerCase();
+            let icon = '⚠️';
+            let bg = 'bg-slate-500';
+            let color = '#64748b';
+            if (catLower.includes('flood')) { icon = '🌊'; bg = 'bg-cyan-600'; color = '#0891b2'; }
+            else if (catLower.includes('rain')) { icon = '🌧️'; bg = 'bg-sky-500'; color = '#0284c7'; }
+            else if (catLower.includes('thunder') || catLower.includes('lightning')) { icon = '⚡'; bg = 'bg-purple-600'; color = '#7c3aed'; }
+            else if (catLower.includes('heat')) { icon = '🌡️'; bg = 'bg-orange-500'; color = '#ea580c'; }
+            else if (catLower.includes('dust')) { icon = '🌪️'; bg = 'bg-amber-600'; color = '#d97706'; }
+            else if (catLower.includes('wind') || catLower.includes('cyclone')) { icon = '💨'; bg = 'bg-emerald-600'; color = '#059669'; }
+
+            return {
+              category: c.category || 'Unknown',
+              count: c.count,
+              pct: total > 0 ? Math.round((c.count / total) * 100) : 0,
+              icon,
+              bg,
+              color
+            };
+          });
+          setCategoryData(formattedCategories);
+        }
+
+        if (source.sources) {
+          const formattedSources = source.sources.map((s: any) => {
+            let icon = Radio;
+            let type = 'Unknown Source';
+            let barColor = '#64748b';
+            
+            if (s.platform === 'citizen_app') {
+              icon = Smartphone; type = 'Geotagged Crowd Reports'; barColor = '#0284c7';
+            } else if (s.platform === 'news') {
+              icon = FileText; type = 'News Media'; barColor = '#f59e0b';
+            } else if (s.platform === 'social') {
+              icon = MessageCircle; type = 'Social Media'; barColor = '#8b5cf6';
+            } else {
+              icon = Radio; type = 'Official Sensor'; barColor = '#10b981';
+            }
+
+            return {
+              handle: s.handle,
+              platform: s.platform,
+              source: s.handle || s.platform || 'System',
+              type,
+              reliability: Math.round((s.verified_rate || 0) * 100),
+              icon,
+              barColor,
+              volume: `${s.total_reports || 0} reports`,
+              fpRate: `Trust tier: ${s.trust_tier}`
+            };
+          });
+          setSourceData(formattedSources);
+        }
+        
+        if (status.statuses) setStatusData(status.statuses);
+        if (stats) setDashboardStats(stats);
+      } catch (err) {
+        console.error('Failed to fetch analytics:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAnalytics();
+  }, [timeFilter]);
+
   // Custom Recharts Tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -192,11 +306,11 @@ export default function Analytics() {
             Total Multi-Source Ingestion
           </span>
           <div className="text-[26px] font-black text-slate-900 font-['Outfit'] mt-1">
-            21,760
+            {dashboardStats?.total_reports?.toLocaleString() || '0'}
           </div>
           <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-bold mt-1">
             <TrendingUp size={13} />
-            <span>+14.2% vs previous period</span>
+            <span>Active Pipeline</span>
           </div>
         </div>
 
@@ -205,10 +319,10 @@ export default function Analytics() {
             AI Automated Corroboration
           </span>
           <div className="text-[26px] font-black text-sky-600 font-['Outfit'] mt-1">
-            91.4%
+            {dashboardStats?.avg_confidence ? `${Math.round(dashboardStats.avg_confidence * 100)}%` : '0%'}
           </div>
           <span className="text-[11px] text-slate-400 font-medium">
-            Cosine similarity &gt; 0.85
+            Mean event veracity score
           </span>
         </div>
 
@@ -217,19 +331,19 @@ export default function Analytics() {
             Severe Hazard Warnings
           </span>
           <div className="text-[26px] font-black text-rose-600 font-['Outfit'] mt-1">
-            39 Incidents
+            {dashboardStats?.severe_events?.toLocaleString() || '0'} Incidents
           </div>
           <span className="text-[11px] text-rose-500 font-bold">
-            Red alerts dispatched to NDMA
+            High priority tracking
           </span>
         </div>
 
         <div className="glass-card p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-            Mean Pipeline Latency
+            Active Confirmed Events
           </span>
           <div className="text-[26px] font-black text-purple-600 font-['Outfit'] mt-1">
-            1.24s
+            {dashboardStats?.total_events?.toLocaleString() || '0'}
           </div>
           <span className="text-[11px] text-slate-400 font-medium">
             Edge Kafka to Analyst Terminal
@@ -269,7 +383,7 @@ export default function Analytics() {
           {/* Recharts Area Chart Container */}
           <div className="w-full h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={HOURLY_INGESTION_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={timeseriesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   {/* Verified gradient */}
                   <linearGradient id="verifiedGradient" x1="0" y1="0" x2="0" y2="1">
@@ -341,8 +455,8 @@ export default function Analytics() {
 
             {/* Horizontal Proportional Progress Bars */}
             <div className="space-y-3.5 pt-3">
-              {HAZARD_DISTRIBUTION.map((item) => (
-                <div key={item.category} className="space-y-1">
+              {categoryData.map((item: any, i: number) => (
+                <div key={item.category || i} className="space-y-1">
                   <div className="flex items-center justify-between text-[11px] font-bold">
                     <span className="flex items-center gap-1.5 text-slate-700">
                       <span>{item.icon}</span>
@@ -367,7 +481,15 @@ export default function Analytics() {
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60 text-[11px] text-slate-500 flex items-center justify-between">
             <span>Primary Active Hazard:</span>
-            <span className="font-bold text-sky-700">🌧️ Rainfall (36% National Share)</span>
+            <span className="font-bold text-slate-700">
+              {categoryData && categoryData.length > 0 ? (
+                <>
+                  {categoryData.reduce((prev, curr) => (prev.count > curr.count ? prev : curr)).icon}{' '}
+                  {categoryData.reduce((prev, curr) => (prev.count > curr.count ? prev : curr)).category} 
+                  {' '}({categoryData.reduce((prev, curr) => (prev.count > curr.count ? prev : curr)).pct}% National Share)
+                </>
+              ) : 'N/A'}
+            </span>
           </div>
         </div>
 
@@ -388,11 +510,11 @@ export default function Analytics() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {SOURCE_RELIABILITY.map((src) => {
-              const Icon = src.icon;
+            {sourceData.map((src: any, i: number) => {
+              const Icon = src.icon || Radio;
               return (
                 <div
-                  key={src.source}
+                  key={`${src.handle || src.platform || 'source'}-${i}`}
                   className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-3"
                 >
                   <div className="flex items-start justify-between">

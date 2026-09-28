@@ -159,6 +159,10 @@ class Report(Base):
                 pass
         return None
 
+    @property
+    def media_urls(self) -> list[str]:
+        return [m.storage_url for m in self.media_items] if self.media_items else []
+
     __table_args__ = (
         CheckConstraint(
             "geocode_method IS NULL OR geocode_method IN ('gps','ner_geocoded','manual')",

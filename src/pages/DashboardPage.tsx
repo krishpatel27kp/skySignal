@@ -4,7 +4,7 @@
    report volume chart, and source reliability meters
    ═══════════════════════════════════════════════════════ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cloud, RefreshCw } from 'lucide-react';
 import KpiCards from '../components/dashboard/KpiCards';
@@ -14,18 +14,57 @@ import EventsTable from '../components/dashboard/EventsTable';
 import ReportVolumeChart from '../components/dashboard/ReportVolumeChart';
 import SourceReliabilityPanel from '../components/dashboard/SourceReliabilityPanel';
 import EventDetailDrawer from '../components/events/EventDetailDrawer';
+import { getEvents, getDashboardStats } from '../services/apiClient';
 import {
   mockKpiStats,
-  mockEvents,
   mockPriorityWatch,
   mockChartData,
   mockSourceReliability,
 } from '../data/mock';
+import type { WeatherEvent } from '../types/weather';
 
 export default function DashboardPage() {
   const { t } = useTranslation();
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
-  const [eventsList, setEventsList] = useState(mockEvents);
+  const [eventsList, setEventsList] = useState<any[]>([]);
+  const [kpiStats, setKpiStats] = useState(mockKpiStats);
+
+  // Fetch events from live backend
+  useEffect(() => {
+    getEvents(undefined, { limit: 50 })
+      .then((res) => setEventsList(res.results))
+      .catch((err) => console.error('Failed to load events:', err));
+
+    // Try to fetch real KPI stats from analytics (admin-only)
+    getDashboardStats()
+      .then((stats) => {
+        setKpiStats([
+          { ...mockKpiStats[0], value: stats.active_events },
+          { ...mockKpiStats[1], value: stats.total_reports },
+          { ...mockKpiStats[2], value: stats.pending_reports > 0 ? `${Math.round(((stats.total_reports - stats.pending_reports) / Math.max(1, stats.total_reports)) * 100)}%` : '—' },
+          { ...mockKpiStats[3], value: stats.critical_high_events },
+        ]);
+      })
+      .catch(() => {
+        // Fallback to static KPI stats (user may not be authenticated)
+      });
+  }, []);
+
+  // Derive priority watch from severe events
+  const priorityWatch = eventsList
+    .filter((e: WeatherEvent) => e.severity === 'severe')
+    .slice(0, 5)
+    .map((e: WeatherEvent) => ({
+      id: e.id,
+      title: e.title,
+      category: e.category,
+      severity: e.severity,
+      location: `${e.city || ''}, ${e.state || ''}`.replace(/^, |, $/g, ''),
+      timeAgo: e.last_updated_at
+        ? `${Math.round((Date.now() - new Date(e.last_updated_at).getTime()) / 60000)}m ago`
+        : '—',
+      confidence: e.confidence,
+    }));
 
   return (
     <div className="space-y-6">
@@ -63,12 +102,12 @@ export default function DashboardPage() {
       </div>
 
       {/* ── KPI Stat Cards ── */}
-      <KpiCards stats={mockKpiStats} />
+      <KpiCards stats={kpiStats} />
 
       {/* ── Main Content Grid: Map + Priority Watch ── */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
         <GeoRadarMap events={eventsList} onSelectEvent={setSelectedEvent} />
-        <PriorityWatchPanel items={mockPriorityWatch} />
+        <PriorityWatchPanel items={priorityWatch.length > 0 ? priorityWatch : mockPriorityWatch} />
       </div>
 
       {/* ── Events Table ── */}

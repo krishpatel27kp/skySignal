@@ -16,7 +16,7 @@ import {
   Split,
   X,
 } from 'lucide-react';
-import { getDuplicateClusters } from '../services/mockApi';
+import { getDuplicateClusters } from '../services/apiClient';
 import type { DuplicateCluster } from '../types/weather';
 
 export default function DuplicateReviewPage() {

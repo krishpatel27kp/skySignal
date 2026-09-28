@@ -18,7 +18,8 @@ import {
   X,
   LogOut,
 } from 'lucide-react';
-import { mockWeatherEvents } from '../../lib/mockData';
+import { getEvents } from '../../services/apiClient';
+import type { WeatherEvent } from '../../types/weather';
 
 interface TopbarProps {
   onToggleMobileMenu: () => void;
@@ -73,7 +74,14 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
 
   // Notifications dropdown
   const [showNotifications, setShowNotifications] = useState(false);
-  const severeAlerts = mockWeatherEvents.filter((e) => e.severity === 'severe');
+  const [severeAlerts, setSevereAlerts] = useState<WeatherEvent[]>([]);
+
+  // Fetch severe alerts from backend
+  useEffect(() => {
+    getEvents({ severity: 'severe' }, { limit: 10 })
+      .then((res) => setSevereAlerts(res.results))
+      .catch(() => {});
+  }, []);
 
   // Breadcrumbs determination
   const currentRouteMeta = ROUTE_TITLES[location.pathname] || {
@@ -134,7 +142,7 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
       {/* ── Right: Clock, Telemetry Status, i18n, Alerts & Auth ── */}
       <div className="flex items-center gap-2.5 sm:gap-3">
         {/* Live IST Digital Clock */}
-        <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-600">
+        <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600">
           <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
           <span>{istTime || '24 Sep 2026 · 14:32:00 IST'}</span>
         </div>

@@ -67,16 +67,6 @@ export default function App() {
             />
             <Route path="/events" element={<Navigate to="/explorer" replace />} />
 
-            {/* Analytics Dashboard */}
-            <Route
-              path="/analytics"
-              element={
-                <Suspense fallback={<RouteLoadingFallback />}>
-                  <Analytics />
-                </Suspense>
-              }
-            />
-
             {/* Citizen Portal (/report and alias /citizen) */}
             <Route
               path="/report"
@@ -116,6 +106,16 @@ export default function App() {
                 element={
                   <Suspense fallback={<RouteLoadingFallback />}>
                     <DataSourcesPage />
+                  </Suspense>
+                }
+              />
+
+              {/* Analytics Dashboard (Admin Only) */}
+              <Route
+                path="/analytics"
+                element={
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <Analytics />
                   </Suspense>
                 }
               />
