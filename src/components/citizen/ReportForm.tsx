@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   X,
   WifiOff,
-  Navigation,
+  LocateFixed,
   Check,
 } from 'lucide-react';
 import { queueOfflineReport, getOrCreateDeviceId, type QueuedReport } from '../../lib/offlineQueue';
@@ -31,6 +31,45 @@ import type { WeatherCategory, Severity } from '../../types/weather';
 interface ReportFormProps {
   onReportSubmitted?: (report: QueuedReport) => void;
 }
+
+// Major Indian Cities Coordinate Fallback (for instant offline & high-accuracy matching)
+const INDIAN_CITIES_REF = [
+  { city: 'Mumbai', state: 'Maharashtra', lat: 19.0760, lon: 72.8777 },
+  { city: 'Delhi', state: 'Delhi', lat: 28.6139, lon: 77.2090 },
+  { city: 'Bengaluru', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
+  { city: 'Kolkata', state: 'West Bengal', lat: 22.5726, lon: 88.3639 },
+  { city: 'Chennai', state: 'Tamil Nadu', lat: 13.0827, lon: 80.2707 },
+  { city: 'Hyderabad', state: 'Telangana', lat: 17.3850, lon: 78.4867 },
+  { city: 'Ahmedabad', state: 'Gujarat', lat: 23.0225, lon: 72.5714 },
+  { city: 'Pune', state: 'Maharashtra', lat: 18.5204, lon: 73.8567 },
+  { city: 'Jaipur', state: 'Rajasthan', lat: 26.9124, lon: 75.7873 },
+  { city: 'Surat', state: 'Gujarat', lat: 21.1702, lon: 72.8311 },
+  { city: 'Lucknow', state: 'Uttar Pradesh', lat: 26.8467, lon: 80.9462 },
+  { city: 'Kanpur', state: 'Uttar Pradesh', lat: 26.4499, lon: 80.3319 },
+  { city: 'Nagpur', state: 'Maharashtra', lat: 21.1458, lon: 79.0882 },
+  { city: 'Indore', state: 'Madhya Pradesh', lat: 22.7196, lon: 75.8577 },
+  { city: 'Thane', state: 'Maharashtra', lat: 19.2183, lon: 72.9781 },
+  { city: 'Bhopal', state: 'Madhya Pradesh', lat: 23.2599, lon: 77.4126 },
+  { city: 'Visakhapatnam', state: 'Andhra Pradesh', lat: 17.6868, lon: 83.2185 },
+  { city: 'Patna', state: 'Bihar', lat: 25.5941, lon: 85.1376 },
+  { city: 'Vadodara', state: 'Gujarat', lat: 22.3072, lon: 73.1812 },
+  { city: 'Ghaziabad', state: 'Uttar Pradesh', lat: 28.6692, lon: 77.4538 },
+  { city: 'Ludhiana', state: 'Punjab', lat: 30.9010, lon: 75.8573 },
+  { city: 'Agra', state: 'Uttar Pradesh', lat: 27.1767, lon: 78.0081 },
+  { city: 'Nashik', state: 'Maharashtra', lat: 19.9975, lon: 73.7898 },
+  { city: 'Varanasi', state: 'Uttar Pradesh', lat: 25.3176, lon: 82.9739 },
+  { city: 'Srinagar', state: 'Jammu and Kashmir', lat: 34.0837, lon: 74.7973 },
+  { city: 'Amritsar', state: 'Punjab', lat: 31.6340, lon: 74.8723 },
+  { city: 'Ranchi', state: 'Jharkhand', lat: 23.3441, lon: 85.3096 },
+  { city: 'Coimbatore', state: 'Tamil Nadu', lat: 11.0168, lon: 76.9558 },
+  { city: 'Guwahati', state: 'Assam', lat: 26.1445, lon: 91.7362 },
+  { city: 'Chandigarh', state: 'Chandigarh', lat: 30.7333, lon: 76.7794 },
+  { city: 'Thiruvananthapuram', state: 'Kerala', lat: 8.5241, lon: 76.9366 },
+  { city: 'Kochi', state: 'Kerala', lat: 9.9312, lon: 76.2673 },
+  { city: 'Dehradun', state: 'Uttarakhand', lat: 30.3165, lon: 78.0322 },
+  { city: 'Bhubaneswar', state: 'Odisha', lat: 20.2961, lon: 85.8245 },
+  { city: 'Panaji', state: 'Goa', lat: 15.4909, lon: 73.8278 },
+];
 
 const CATEGORIES: { id: WeatherCategory; labelEn: string; labelHi: string; icon: any }[] = [
   { id: 'rainfall', labelEn: 'Rainfall', labelHi: 'भारी बारिश', icon: CloudRain },
@@ -65,10 +104,10 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
   const [feedbackToast, setFeedbackToast] = useState<{ message: string; isOffline?: boolean } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Instant GPS Geolocation
+  // Instant GPS Geolocation with Real Reverse Geocoding
   const handleGetLocation = () => {
     setIsLocating(true);
-    setLocationStatus(isHindi ? 'जीपीएस स्थान प्राप्त किया जा रहा है...' : 'Acquiring GPS fix from device sensors...');
+    setLocationStatus(isHindi ? 'जीपीएस स्थान और शहर का पता लगाया जा रहा है...' : 'Detecting your live GPS coordinates & locality...');
 
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setLocationStatus(isHindi ? 'जीपीएस समर्थित नहीं है' : 'GPS hardware unavailable on this device');
@@ -77,34 +116,76 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const latitude = Number(pos.coords.latitude.toFixed(4));
         const longitude = Number(pos.coords.longitude.toFixed(4));
         setLat(latitude);
         setLon(longitude);
-        setCity('Current GPS Fix');
-        setState('Auto-detected Region');
+
+        let detectedCity = '';
+        let detectedState = '';
+
+        // Attempt reverse geocoding via OpenStreetMap Nominatim with timeout
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+            { signal: controller.signal, headers: { 'Accept': 'application/json' } }
+          );
+          clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const localArea = addr.suburb || addr.neighbourhood || addr.residential || '';
+            const cityName = addr.city || addr.town || addr.municipality || addr.district || addr.county || '';
+            detectedCity = localArea && cityName ? `${localArea}, ${cityName}` : cityName || localArea;
+            detectedState = addr.state || addr.state_district || '';
+          }
+        } catch (e) {
+          console.warn('Online reverse geocoding failed or timed out:', e);
+        }
+
+        // If online lookup failed or returned empty, use nearest city fallback
+        if (!detectedCity || !detectedState) {
+          let nearestCity = INDIAN_CITIES_REF[0];
+          let minDistance = Infinity;
+          for (const c of INDIAN_CITIES_REF) {
+            const d = Math.hypot(c.lat - latitude, c.lon - longitude);
+            if (d < minDistance) {
+              minDistance = d;
+              nearestCity = c;
+            }
+          }
+          detectedCity = detectedCity || nearestCity.city;
+          detectedState = detectedState || nearestCity.state;
+        }
+
+        // Directly populate the form fields
+        setCity(detectedCity);
+        setState(detectedState);
         setLocationStatus(
           isHindi
-            ? `स्थान दर्ज: ${latitude}°N, ${longitude}°E (सटीकता ~${Math.round(pos.coords.accuracy)}m)`
-            : `Coordinates locked: ${latitude}°N, ${longitude}°E (±${Math.round(pos.coords.accuracy)}m accuracy)`
+            ? `✓ लाइव स्थान दर्ज: ${detectedCity}, ${detectedState} (${latitude}°N, ${longitude}°E)`
+            : `✓ Live location detected: ${detectedCity}, ${detectedState} (${latitude}°N, ${longitude}°E)`
         );
         setIsLocating(false);
       },
       (_err) => {
-        // Fallback default coordinates
+        // Fallback default coordinates to Mumbai
         setCity('Mumbai');
         setState('Maharashtra');
         setLat(19.076);
         setLon(72.8777);
         setLocationStatus(
           isHindi
-            ? 'जीपीएस अनुमति अस्वीकृत। डिफ़ॉल्ट रूप से मुंबई चुना गया।'
-            : 'GPS permission denied. Fallback set to Mumbai region.'
+            ? 'जीपीएस अनुमति अस्वीकृत। डिफ़ॉल्ट स्थान मुंबई, महाराष्ट्र चुना गया।'
+            : 'GPS access denied. Default fallback set to Mumbai, Maharashtra.'
         );
         setIsLocating(false);
       },
-      { timeout: 7000, enableHighAccuracy: true }
+      { timeout: 8000, enableHighAccuracy: true }
     );
   };
 
@@ -285,13 +366,9 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
       {/* ── 1. Hazard Category Grid (7 Interactive Icon Tiles) ── */}
       <div>
         <div className="flex items-center justify-between mb-2.5">
-          <label className="text-[13px] font-black text-slate-900 flex items-center gap-2">
+          <label className="text-[13px] font-black text-stone-900 flex items-center gap-2">
             <span>1. {isHindi ? 'मौसम आपदा का प्रकार' : 'Hazard Category'}</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-bold">
-              7 Strict Types
-            </span>
           </label>
-          <span className="text-[11px] text-slate-400">Under 30s Tap</span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
@@ -310,14 +387,14 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
                   transition-all duration-200 cursor-pointer select-none
                   ${
                     isSelected
-                      ? 'border-sky-500 bg-sky-500/10 shadow-md ring-2 ring-sky-500/30 font-extrabold scale-102'
-                      : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/80 text-slate-700 font-semibold'
+                      ? 'border-amber-500 bg-amber-500/10 shadow-md ring-2 ring-amber-500/30 font-extrabold scale-102'
+                      : 'border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50/80 text-stone-700 font-semibold'
                   }
                 `}
               >
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs"
-                  style={{ backgroundColor: meta?.color || '#0284c7' }}
+                  style={{ backgroundColor: meta?.color || '#d97706' }}
                 >
                   <Icon size={18} />
                 </div>
@@ -332,94 +409,135 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
 
       {/* ── 2. Severity Level (Strict 3-Tier) ── */}
       <div>
-        <label className="block text-[13px] font-black text-slate-900 mb-2">
+        <label className="block text-[13px] font-black text-stone-900 mb-2">
           2. {isHindi ? 'तीव्रता का स्तर' : 'Estimated Impact Severity'}
         </label>
         <div className="grid grid-cols-3 gap-3">
-          {(['minor', 'moderate', 'severe'] as Severity[]).map((sev) => {
-            const config = SEVERITY_CONFIG[sev];
-            const isSelected = severity === sev;
+          {([
+            { id: 'minor' as Severity, en: 'Minor', hi: 'हल्का' },
+            { id: 'moderate' as Severity, en: 'Moderate', hi: 'मध्यम' },
+            { id: 'severe' as Severity, en: 'Severe', hi: 'गंभीर' },
+          ]).map((item) => {
+            const config = SEVERITY_CONFIG[item.id];
+            const isSelected = severity === item.id;
 
             return (
               <button
                 type="button"
-                key={sev}
-                onClick={() => setSeverity(sev)}
+                key={item.id}
+                onClick={() => setSeverity(item.id)}
                 className={`
                   py-2.5 px-3 rounded-2xl border text-center transition-all cursor-pointer font-bold text-[12px] flex items-center justify-center gap-2
                   ${
                     isSelected
-                      ? sev === 'severe'
+                      ? item.id === 'severe'
                         ? 'border-red-500 bg-red-50 text-red-700 shadow-md ring-2 ring-red-400/40'
-                        : sev === 'moderate'
-                        ? 'border-sky-500 bg-sky-50 text-sky-700 shadow-md ring-2 ring-sky-400/40'
+                        : item.id === 'moderate'
+                        ? 'border-amber-500 bg-amber-50 text-amber-800 shadow-md ring-2 ring-amber-400/40'
                         : 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-md ring-2 ring-emerald-400/40'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'
                   }
                 `}
               >
                 <span>{config.icon}</span>
-                <span className="capitalize">{config.label}</span>
+                <span>{item.en} • {item.hi}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* ── 3. Instant GPS Location & Manual Inputs ── */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-[13px] font-black text-slate-900 flex items-center gap-1.5">
+      {/* ── 3. Instant GPS Location & Manual Inputs (Prominent & Auto-Fills City + State) ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-[13px] font-black text-stone-900 flex items-center gap-1.5">
             <span>3. {isHindi ? 'घटना का स्थान' : 'Incident Location'}</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">
+              GPS Verified
+            </span>
           </label>
+          <span className="text-[11px] text-stone-400">{isHindi ? 'शहर व राज्य आवश्यक' : 'City & State Required'}</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        {/* Dedicated Live Location Detection Action Card */}
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/90 via-orange-50/50 to-stone-50 border border-amber-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs shrink-0">
+              <LocateFixed size={18} className={isLocating ? 'animate-spin' : 'animate-pulse'} />
+            </div>
+            <div>
+              <div className="text-[13px] font-bold text-stone-900 flex items-center gap-2">
+                <span>{isHindi ? 'लाइव जीपीएस स्थान का पता लगाएं' : 'Auto-Detect My Live Location'}</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              </div>
+              <p className="text-[11px] text-stone-500 mt-0.5">
+                {isHindi
+                  ? 'एक क्लिक में अपना सटीक शहर, राज्य और निर्देशांक स्वतः भरें।'
+                  : 'Click to automatically fill your City, State & GPS coordinates.'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGetLocation}
+            disabled={isLocating}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-98 text-white text-[12px] font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap self-start sm:self-center"
+          >
+            <LocateFixed size={15} className={isLocating ? 'animate-spin' : ''} />
+            <span>
+              {isLocating
+                ? (isHindi ? 'स्थान खोज रहे हैं...' : 'Detecting GPS...')
+                : (isHindi ? '📍 मेरा लाइव स्थान दर्ज करें' : '📍 Detect Live Location')}
+            </span>
+          </button>
+        </div>
+
+        {/* Explicit Form Fields: City / Locality and State */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="block text-[11px] font-bold text-stone-600 mb-1">
+              {isHindi ? 'शहर / इलाका' : 'City / Locality'} *
+            </label>
+            <div className="relative">
+              <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-600" />
               <input
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder={isHindi ? 'शहर / इलाका (उदा. बांद्रा, मुंबई)' : 'City / Locality (e.g. Bandra, Mumbai)'}
-                className="w-full pl-10 pr-3.5 py-2.5 text-[12px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900 font-medium"
+                placeholder={isHindi ? 'उदा. बांद्रा, मुंबई' : 'e.g. Bandra, Mumbai'}
+                className="w-full pl-10 pr-3.5 py-2.5 text-[12px] bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-900 font-medium shadow-2xs"
                 required
               />
             </div>
-            <button
-              type="button"
-              onClick={handleGetLocation}
-              disabled={isLocating}
-              title={isHindi ? 'मेरा जीपीएस स्थान उपयोग करें' : 'Use my GPS location'}
-              className="flex-shrink-0 flex items-center justify-center w-[42px] h-[42px] bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl transition-colors cursor-pointer shadow-sm"
-            >
-              <Navigation size={16} className={isLocating ? 'animate-spin' : ''} />
-            </button>
           </div>
+
           <div>
+            <label className="block text-[11px] font-bold text-stone-600 mb-1">
+              {isHindi ? 'राज्य / केंद्र शासित प्रदेश' : 'State / Union Territory'} *
+            </label>
             <input
               type="text"
               value={state}
               onChange={(e) => setState(e.target.value)}
-              placeholder={isHindi ? 'राज्य (उदा. महाराष्ट्र)' : 'State / UT (e.g. Maharashtra)'}
-              className="w-full px-3.5 py-2.5 text-[12px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900 font-medium"
+              placeholder={isHindi ? 'उदा. महाराष्ट्र' : 'e.g. Maharashtra'}
+              className="w-full px-3.5 py-2.5 text-[12px] bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-900 font-medium shadow-2xs"
               required
             />
           </div>
         </div>
 
         {locationStatus && (
-          <p className="text-[11px] text-sky-700 font-semibold flex items-center gap-1.5 pt-0.5">
-            <Check size={12} className="text-sky-600" />
+          <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold flex items-center gap-2 animate-fade-in">
+            <Check size={14} className="text-emerald-600 shrink-0" />
             <span>{locationStatus}</span>
-          </p>
+          </div>
         )}
       </div>
 
       {/* ── 4. Media Upload Zone (Drag-and-Drop + 10MB limit) ── */}
       <div className="space-y-2">
-        <label className="block text-[13px] font-black text-slate-900">
+        <label className="block text-[13px] font-black text-stone-900">
           4. {isHindi ? 'प्रमाण फोटो / वीडियो (अधिकतम 10MB)' : 'Photo / Video Evidence (Max 10MB)'}
         </label>
 
@@ -434,8 +552,8 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
             relative p-6 rounded-2xl border-2 border-dashed text-center transition-all duration-200 flex flex-col items-center justify-center gap-2 cursor-pointer
             ${
               isDragOver
-                ? 'border-sky-500 bg-sky-50/70 scale-101'
-                : 'border-slate-300 hover:border-sky-400 bg-slate-50/50 hover:bg-slate-50'
+                ? 'border-amber-500 bg-amber-50/70 scale-101'
+                : 'border-stone-300 hover:border-amber-400 bg-stone-50/50 hover:bg-stone-50'
             }
           `}
         >
@@ -448,14 +566,14 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
             className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
             aria-label="Upload weather photo or video"
           />
-          <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center shadow-xs">
+          <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shadow-xs">
             <Camera size={20} />
           </div>
           <div>
-            <span className="text-[12px] font-bold text-slate-800">
+            <span className="text-[12px] font-bold text-stone-800">
               {isHindi ? 'फोटो खींचें या यहाँ खींचकर छोड़ें' : 'Take a photo or drag files here'}
             </span>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-stone-400 mt-0.5">
               Supports JPG, PNG, MP4 up to 10MB per file
             </p>
           </div>
@@ -467,7 +585,7 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
             {mediaUrls.map((url, idx) => (
               <div
                 key={idx}
-                className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 shadow-xs group"
+                className="relative w-16 h-16 rounded-xl overflow-hidden border border-stone-200 shadow-xs group"
               >
                 <img src={url} alt="Attached evidence" className="w-full h-full object-cover" />
                 <button
@@ -487,12 +605,12 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
       {/* ── 5. Description Textarea with Character Counter (Max 2,000) ── */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <label className="text-[13px] font-black text-slate-900">
+          <label className="text-[13px] font-black text-stone-900">
             5. {isHindi ? 'घटना का विवरण' : 'Ground Observation Narrative'}
           </label>
           <span
             className={`text-[11px] font-mono font-bold ${
-              description.length > 1800 ? 'text-amber-600' : 'text-slate-400'
+              description.length > 1800 ? 'text-amber-600' : 'text-stone-400'
             }`}
           >
             {description.length}/{MAX_CHARS}
@@ -509,7 +627,7 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
               ? 'पानी का स्तर (घुटने तक/कमर तक), गिरे हुए पेड़, रुकी हुई सड़कें या बिजली पोल की स्थिति लिखें...'
               : 'Details: water depth (knee-high, vehicle stall), blocked thoroughfares, fallen trees, zero visibility...'
           }
-          className="w-full p-3.5 text-[12px] bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-900 leading-relaxed font-medium"
+          className="w-full p-3.5 text-[12px] bg-white border border-stone-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-900 leading-relaxed font-medium shadow-2xs"
         />
       </div>
 
@@ -518,18 +636,18 @@ export default function ReportForm({ onReportSubmitted }: ReportFormProps) {
         type="submit"
         disabled={isSubmitting}
         className="
-          w-full py-2 px-4 bg-sky-600 hover:bg-sky-700
+          w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 active:scale-99
           text-white rounded-xl text-[13px] font-bold shadow-md
           transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer
         "
       >
         {isSubmitting ? (
-          <span>{isHindi ? 'रिपोर्ट भेजी जा रही है...' : 'Encrypting & Transmitting...'}</span>
+          <span>{isHindi ? 'रिपोर्ट भेजी जा रही है...' : 'Submitting...'}</span>
         ) : (
           <>
             <Send size={16} />
             <span>
-              {isHindi ? 'आईएमडी रडार को रिपोर्ट सबमिट करें' : 'Submit Rapid Observation (Instant)'}
+              {isHindi ? 'सबमिट' : 'Submit'}
             </span>
           </>
         )}

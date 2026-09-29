@@ -21,7 +21,7 @@ import {
 import GeoRadarMap from '../components/dashboard/GeoRadarMap';
 import EventDetailDrawer from '../components/events/EventDetailDrawer';
 import { getEvents } from '../services/apiClient';
-import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../data/mock';
+import { CATEGORY_CONFIG, SEVERITY_CONFIG, formatConfidence, formatEventId } from '../data/mock';
 
 export default function EventExplorerPage() {
 
@@ -68,8 +68,8 @@ export default function EventExplorerPage() {
       })
       .sort((a, b) => {
         if (sortBy === 'severity') {
-          const rank = { severe: 3, moderate: 2, minor: 1 };
-          return rank[b.severity] - rank[a.severity];
+          const rank: Record<string, number> = { severe: 3, moderate: 2, minor: 1 };
+          return (rank[b.severity] || 0) - (rank[a.severity] || 0);
         }
         if (sortBy === 'confidence') {
           return b.confidence - a.confidence;
@@ -372,7 +372,7 @@ export default function EventExplorerPage() {
                   </tr>
                 ) : (
                   filteredEvents.map((evt) => {
-                    const catMeta = CATEGORY_CONFIG[evt.category];
+                    const catMeta = (CATEGORY_CONFIG as any)[evt.category];
                     const sevMeta = SEVERITY_CONFIG[evt.severity];
 
                     return (
@@ -383,7 +383,7 @@ export default function EventExplorerPage() {
                       >
                         <td className="py-3.5 px-4">
                           <div className="font-bold text-slate-900">{evt.title}</div>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{evt.id}</div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{formatEventId(evt.id)}</div>
                         </td>
                         <td className="py-3.5 px-3">
                           <span
@@ -393,9 +393,9 @@ export default function EventExplorerPage() {
                             {evt.category}
                           </span>
                         </td>
-                        <td className="py-3.5 px-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sevMeta?.className}`}>
-                            {sevMeta?.icon} {sevMeta?.label}
+                        <td className="py-3.5 px-3 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${sevMeta?.className || 'bg-slate-100 text-slate-700'}`}>
+                            {sevMeta?.icon || '⚠️'} {sevMeta?.label || evt.severity}
                           </span>
                         </td>
                         <td className="py-3.5 px-3">
@@ -412,11 +412,11 @@ export default function EventExplorerPage() {
                             <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-sky-500 rounded-full"
-                                style={{ width: `${evt.confidence}%` }}
+                                style={{ width: `${formatConfidence(evt.confidence)}%` }}
                               />
                             </div>
                             <span className="text-[11px] font-bold text-slate-700">
-                              {evt.confidence}%
+                              {formatConfidence(evt.confidence)}%
                             </span>
                           </div>
                         </td>
@@ -452,7 +452,7 @@ export default function EventExplorerPage() {
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
           {filteredEvents.map((evt) => {
-            const catMeta = CATEGORY_CONFIG[evt.category];
+            const catMeta = (CATEGORY_CONFIG as any)[evt.category];
             const sevMeta = SEVERITY_CONFIG[evt.severity];
 
             return (
@@ -489,7 +489,7 @@ export default function EventExplorerPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="font-semibold text-slate-500">AI Confidence:</span>
-                      <span className="font-bold text-sky-600">{evt.confidence}%</span>
+                      <span className="font-bold text-sky-600">{formatConfidence(evt.confidence)}%</span>
                     </div>
                   </div>
                 </div>

@@ -7,55 +7,56 @@
    ═══════════════════════════════════════════════════════ */
 
 @theme {
-  /* ── Core Brand Colors ── */
-  --color-primary-50: #e6f4fa;
-  --color-primary-100: #b3dff0;
-  --color-primary-200: #80c9e5;
-  --color-primary-300: #4db4db;
-  --color-primary-400: #2ba1cf;
-  --color-primary-500: #1c7293;
-  --color-primary-600: #186381;
-  --color-primary-700: #12506a;
-  --color-primary-800: #0d3d53;
-  --color-primary-900: #082a3c;
+  /* ── Warm Charcoal Graphite & Bronze Amber Brand Palette ── */
+  --color-charcoal-950: #121110;
+  --color-charcoal-900: #181716;
+  --color-charcoal-800: #23211f;
+  --color-charcoal-700: #302d2a;
+  --color-charcoal-600: #44403c;
+  --color-bronze-600: #d97706;
+  --color-bronze-500: #f59e0b;
+  --color-bronze-400: #fbbf24;
+  --color-copper-600: #c2410c;
+  --color-copper-500: #ea580c;
 
   /* ── Atmospheric Accent ── */
   --color-sky-accent: #0284c7;
   --color-cyan-accent: #06b6d4;
-  --color-blue-accent: #2563eb;
+  --color-amber-accent: #d97706;
 
   /* ── Severity Taxonomy (strict 3-tier) ── */
   --color-severity-minor: #10b981;
   --color-severity-minor-bg: #ecfdf5;
   --color-severity-minor-border: #a7f3d0;
-  --color-severity-moderate: #0284c7;
-  --color-severity-moderate-bg: #e0f2fe;
-  --color-severity-moderate-border: #7dd3fc;
-  --color-severity-severe: #ef4444;
+  --color-severity-moderate: #d97706;
+  --color-severity-moderate-bg: #fffbeb;
+  --color-severity-moderate-border: #fde68a;
+  --color-severity-severe: #dc2626;
   --color-severity-severe-bg: #fef2f2;
   --color-severity-severe-border: #fecaca;
 
-  /* ── Canvas & Surfaces ── */
-  --color-canvas: #f8fafc;
+  /* ── Canvas & Surfaces (Warm Stone Slate) ── */
+  --color-canvas: #f6f5f3;
   --color-surface: #ffffff;
-  --color-surface-hover: #f1f5f9;
-  --color-surface-active: #e2e8f0;
-  --color-border: #e2e8f0;
-  --color-border-subtle: #f1f5f9;
+  --color-surface-hover: #fafaf9;
+  --color-surface-active: #f5f5f4;
+  --color-border: #e7e5e4;
+  --color-border-subtle: #f5f5f4;
 
-  /* ── Obsidian Sidebar ── */
-  --color-sidebar-from: #090e17;
-  --color-sidebar-mid: #0d1527;
-  --color-sidebar-to: #080c16;
-  --color-sidebar-border: rgba(255, 255, 255, 0.08);
-  --color-sidebar-text: rgba(255, 255, 255, 0.65);
-  --color-sidebar-text-active: #ffffff;
-  --color-sidebar-glow: #38bdf8;
+  /* ── Warm Charcoal Sidebar Palette ── */
+  --color-sidebar-bg: #181716;
+  --color-sidebar-surface: #23211f;
+  --color-sidebar-border: #302d2a;
+  --color-sidebar-text: #a8a29e;
+  --color-sidebar-text-hover: #ffffff;
+  --color-sidebar-active-bg: #d97706;
+  --color-sidebar-active-text: #ffffff;
+  --color-sidebar-glow: rgba(217, 119, 6, 0.4);
 
   /* ── Text Hierarchy ── */
   --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-tertiary: #94a3b8;
+  --color-text-secondary: #334155;
+  --color-text-tertiary: #64748b;
   --color-text-inverse: #ffffff;
 
   /* ── Status Colors ── */
@@ -76,7 +77,7 @@
   --color-cat-strong-wind: #0d9488;
 
   /* ── Typography ── */
-  --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   /* ── Spacing ── */
@@ -116,6 +117,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  letter-spacing: -0.011em;
 }
 
 body {
@@ -124,6 +126,7 @@ body {
   background-color: var(--color-canvas);
   color: var(--color-text-primary);
   min-height: 100vh;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 /* ── Focus Accessibility (WCAG AA — 3px solid #57a9c7) ── */
@@ -146,24 +149,51 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Glass Card Utility (Professional & Minimal Contrast)
-   Crisp white background (95% solid) + subtle border + soft shadow
+   Enterprise Command Card Utility
+   Crisp, solid surface + micro border + calibrated elevation
    ═══════════════════════════════════════════════════════ */
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s var(--ease-smooth);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.98);
   border-color: #cbd5e1;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+}
+
+/* Command Center Status Badges & Digits */
+.tabular-numbers {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Professional Meteorological Severity Badges */
+.badge-severity-critical {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+.badge-severity-high,
+.badge-severity-severe {
+  background-color: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+.badge-severity-moderate {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.badge-severity-minor,
+.badge-severity-low {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -271,21 +301,82 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Ambient Background Glow
-   Atmospheric radial glows on canvas
+   Floating Atmospheric Ambient Orbs
+   GPU-accelerated organic drift across canvas
+   Zero dark-blue — uses warm amber, coral sunset, sage mist & golden sand
    ═══════════════════════════════════════════════════════ */
 
-.ambient-glow {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+@keyframes float-orb-1 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(120px, -80px, 0) scale(1.1); }
+  66% { transform: translate3d(-70px, 100px, 0) scale(0.95); }
+  100% { transform: translate3d(40px, -40px, 0) scale(1.05); }
+}
+
+@keyframes float-orb-2 {
+  0% { transform: translate3d(0, 0, 0) scale(1.05); }
+  40% { transform: translate3d(-120px, 110px, 0) scale(0.92); }
+  75% { transform: translate3d(80px, -50px, 0) scale(1.15); }
+  100% { transform: translate3d(-30px, 60px, 0) scale(1); }
+}
+
+@keyframes float-orb-3 {
+  0% { transform: translate3d(0, 0, 0) scale(0.95); }
+  50% { transform: translate3d(90px, 80px, 0) scale(1.15); }
+  100% { transform: translate3d(-80px, -60px, 0) scale(0.9); }
+}
+
+@keyframes float-orb-4 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  30% { transform: translate3d(-100px, -100px, 0) scale(1.1); }
+  70% { transform: translate3d(110px, 50px, 0) scale(0.9); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.atmospheric-orb {
+  position: absolute;
+  border-radius: 9999px;
   pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(ellipse 600px 400px at 30% 20%, rgba(2, 132, 199, 0.02), transparent),
-    radial-gradient(ellipse 500px 350px at 70% 60%, rgba(37, 99, 235, 0.015), transparent);
+  filter: blur(140px);
+  will-change: transform;
+  mix-blend-mode: multiply;
+  opacity: 0.6;
+}
+
+.orb-1 {
+  width: 900px;
+  height: 900px;
+  top: -150px;
+  left: 0%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.02) 70%, transparent 100%);
+  animation: float-orb-1 45s ease-in-out infinite alternate;
+}
+
+.orb-2 {
+  width: 1100px;
+  height: 1100px;
+  top: 10%;
+  right: -100px;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.06) 0%, rgba(234, 88, 12, 0.01) 70%, transparent 100%);
+  animation: float-orb-2 55s ease-in-out infinite alternate;
+}
+
+.orb-3 {
+  width: 850px;
+  height: 850px;
+  bottom: 0%;
+  left: 15%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.01) 70%, transparent 100%);
+  animation: float-orb-3 48s ease-in-out infinite alternate;
+}
+
+.orb-4 {
+  width: 1000px;
+  height: 1000px;
+  bottom: -200px;
+  right: 5%;
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.07) 0%, rgba(180, 83, 9, 0.01) 70%, transparent 100%);
+  animation: float-orb-4 60s ease-in-out infinite alternate;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -294,22 +385,43 @@ body {
    Uses icon + text (no color-only badges)
    ═══════════════════════════════════════════════════════ */
 
-.badge-severity-minor {
-  background-color: var(--color-severity-minor-bg);
-  color: #065f46;
-  border: 1px solid var(--color-severity-minor-border);
+.badge-severity-critical {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
 }
 
-.badge-severity-moderate {
-  background-color: var(--color-severity-moderate-bg);
-  color: #075985;
-  border: 1px solid var(--color-severity-moderate-border);
+.badge-severity-high {
+  background-color: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
 }
 
 .badge-severity-severe {
-  background-color: var(--color-severity-severe-bg);
+  background-color: var(--color-severity-severe-bg, #fee2e2);
   color: #991b1b;
-  border: 1px solid var(--color-severity-severe-border);
+  border: 1px solid var(--color-severity-severe-border, #fecaca);
+}
+
+.badge-severity-moderate {
+  background-color: var(--color-severity-moderate-bg, #e0f2fe);
+  color: #075985;
+  border: 1px solid var(--color-severity-moderate-border, #bae6fd);
+}
+
+.badge-severity-minor,
+.badge-severity-low {
+  background-color: var(--color-severity-minor-bg, #ecfdf5);
+  color: #065f46;
+  border: 1px solid var(--color-severity-minor-border, #a7f3d0);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 1rem;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -346,24 +458,20 @@ body {
   background: rgba(255, 255, 255, 0.92);
 }
 
+
+
 /* ═══════════════════════════════════════════════════════
-   Accessibility Standards: Focus Rings & Reduced Motion
+   Global Interactive & Smooth Click Effects
    ═══════════════════════════════════════════════════════ */
 
-/* High-contrast focus rings (WCAG AA) */
-:focus-visible {
-  outline: 3px solid #0284c7;
-  outline-offset: 2px;
+button, a, .cursor-pointer, [role="button"] {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease !important;
 }
 
-/* Reduced motion preference */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+button:active:not(:disabled),
+a:active:not(:disabled),
+.cursor-pointer:active:not(:disabled),
+[role="button"]:active:not(:disabled) {
+  transform: scale(0.96) !important;
+  opacity: 0.9 !important;
 }

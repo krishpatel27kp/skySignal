@@ -12,7 +12,6 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Dynamic code splitting for all route pages
 const Overview = lazy(() => import('./pages/Overview'));
-const EventExplorer = lazy(() => import('./pages/EventExplorer'));
 const VerificationQueue = lazy(() => import('./pages/VerificationQueue'));
 const DuplicateReview = lazy(() => import('./pages/DuplicateReview'));
 const Analytics = lazy(() => import('./pages/Analytics'));
@@ -45,7 +44,7 @@ export default function App() {
         <Routes>
           <Route element={<AppLayout />}>
             {/* ── Public Routes (Accessible by Guests & Admins in Read-Only Mode) ── */}
-            {/* Situational Overview */}
+            {/* Weather Status (Home) */}
             <Route
               index
               element={
@@ -55,17 +54,8 @@ export default function App() {
               }
             />
             <Route path="/overview" element={<Navigate to="/" replace />} />
-
-            {/* Event Explorer (/explorer and alias /events) */}
-            <Route
-              path="/explorer"
-              element={
-                <Suspense fallback={<RouteLoadingFallback />}>
-                  <EventExplorer />
-                </Suspense>
-              }
-            />
-            <Route path="/events" element={<Navigate to="/explorer" replace />} />
+            <Route path="/explorer" element={<Navigate to="/" replace />} />
+            <Route path="/events" element={<Navigate to="/" replace />} />
 
             {/* Citizen Portal (/report and alias /citizen) */}
             <Route

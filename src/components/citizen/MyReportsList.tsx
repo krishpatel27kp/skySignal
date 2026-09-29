@@ -150,7 +150,7 @@ export default function MyReportsList({ refreshTrigger }: MyReportsListProps) {
           <button
             onClick={handleManualSync}
             disabled={isSyncing}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
           >
             <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
             <span>{isSyncing ? 'Syncing...' : isHindi ? 'सिंक रीफ़्रेश' : 'Sync Queue'}</span>

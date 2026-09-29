@@ -44,23 +44,12 @@ interface GeoRadarMapProps {
   height?: string;
 }
 
-// Tile providers (Standard OpenStreetMap — completely free & open source, no API key required)
-const TILE_LAYERS = {
-  light: {
-    name: 'OpenStreetMap',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  },
-  dark: {
-    name: 'OpenStreetMap',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  },
-  topo: {
-    name: 'OpenStreetMap',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  },
+// 100% Free Public OpenStreetMap Standard Tiles — Zero API Key Required
+const OPENSTREETMAP_LAYER = {
+  name: 'OpenStreetMap Standard',
+  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  subdomains: 'abc',
 };
 
 // Map center of India
@@ -85,12 +74,12 @@ export default function GeoRadarMap({
   height = 'h-[500px]',
 }: GeoRadarMapProps) {
   const { isAdmin } = useAuth();
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
-  const [activeLayer, setActiveLayer] = useState<'light' | 'dark' | 'topo'>('light');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -148,9 +137,10 @@ export default function GeoRadarMap({
     });
 
     // Add Tile Layer
-    const tile = L.tileLayer(TILE_LAYERS[activeLayer].url, {
+    const tile = L.tileLayer(OPENSTREETMAP_LAYER.url, {
       maxZoom: 19,
-      attribution: TILE_LAYERS[activeLayer].attribution,
+      subdomains: OPENSTREETMAP_LAYER.subdomains,
+      attribution: OPENSTREETMAP_LAYER.attribution,
     }).addTo(map);
 
     tileLayerRef.current = tile;
@@ -193,17 +183,6 @@ export default function GeoRadarMap({
       mapInstanceRef.current = null;
     };
   }, []);
-
-  // Update Tile Layer when activeLayer changes
-  useEffect(() => {
-    if (!mapInstanceRef.current || !tileLayerRef.current) return;
-    mapInstanceRef.current.removeLayer(tileLayerRef.current);
-    const newTile = L.tileLayer(TILE_LAYERS[activeLayer].url, {
-      maxZoom: 19,
-      attribution: TILE_LAYERS[activeLayer].attribution,
-    }).addTo(mapInstanceRef.current);
-    tileLayerRef.current = newTile;
-  }, [activeLayer]);
 
   // Update Markers when filteredEvents changes
   useEffect(() => {
@@ -342,17 +321,48 @@ export default function GeoRadarMap({
   };
 
   const toggleFullscreen = () => {
-    setIsFullscreen((prev) => !prev);
-    setTimeout(() => {
-      mapInstanceRef.current?.invalidateSize();
-    }, 200);
+    const el = cardRef.current;
+    if (!el) return;
+
+    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+      if (el.requestFullscreen) {
+        el.requestFullscreen().catch(() => setIsFullscreen((prev) => !prev));
+      } else {
+        setIsFullscreen((prev) => !prev);
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      setIsFullscreen(false);
+    }
   };
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      const active = !!document.fullscreenElement || !!(document as any).webkitFullscreenElement;
+      setIsFullscreen(active);
+      [50, 150, 300, 600].forEach((delay) => {
+        setTimeout(() => mapInstanceRef.current?.invalidateSize(), delay);
+      });
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+    };
+  }, []);
 
   return (
     <div
+      ref={cardRef}
       className={`glass-card overflow-hidden transition-all duration-300 flex flex-col ${
-        isFullscreen ? 'fixed inset-4 z-50 shadow-2xl' : ''
+        isFullscreen
+          ? 'fixed inset-0 z-[99999] w-screen h-screen bg-white rounded-none border-none'
+          : 'relative rounded-2xl border border-slate-200/90 shadow-sm'
       } ${className}`}
+      style={isFullscreen ? { width: '100vw', height: '100vh', zIndex: 99999 } : undefined}
     >
       {/* ── Top Bar / Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-[var(--color-border)] bg-white/70 backdrop-blur-md">
@@ -423,41 +433,6 @@ export default function GeoRadarMap({
           </div>
 
           {/* Basemap Toggle */}
-          <div className="flex items-center rounded-lg bg-[var(--color-surface-hover)] p-0.5 border border-[var(--color-border)]">
-            <button
-              onClick={() => setActiveLayer('light')}
-              title="Atmospheric Light Map"
-              className={`px-2 py-1 text-[10px] font-semibold rounded ${
-                activeLayer === 'light'
-                  ? 'bg-white text-[var(--color-primary-600)] shadow-xs'
-                  : 'text-[var(--color-text-tertiary)]'
-              }`}
-            >
-              Light
-            </button>
-            <button
-              onClick={() => setActiveLayer('dark')}
-              title="Obsidian Night Map"
-              className={`px-2 py-1 text-[10px] font-semibold rounded ${
-                activeLayer === 'dark'
-                  ? 'bg-slate-900 text-sky-400 shadow-xs'
-                  : 'text-[var(--color-text-tertiary)]'
-              }`}
-            >
-              Dark
-            </button>
-            <button
-              onClick={() => setActiveLayer('topo')}
-              title="Topographical Map"
-              className={`px-2 py-1 text-[10px] font-semibold rounded ${
-                activeLayer === 'topo'
-                  ? 'bg-emerald-700 text-white shadow-xs'
-                  : 'text-[var(--color-text-tertiary)]'
-              }`}
-            >
-              Topo
-            </button>
-          </div>
 
           {/* Action buttons */}
           <div className="flex items-center gap-1 border-l border-[var(--color-border)] pl-2">
@@ -482,11 +457,11 @@ export default function GeoRadarMap({
       </div>
 
       {/* ── Leaflet Container ── */}
-      <div className="relative flex-1 w-full overflow-hidden">
+      <div className="relative flex-1 w-full min-h-0 overflow-hidden bg-slate-100">
         <div
           ref={mapContainerRef}
-          className={`w-full ${isFullscreen ? 'h-full' : height} z-0`}
-          style={{ minHeight: isFullscreen ? 'calc(100vh - 120px)' : '460px' }}
+          className={`w-full ${isFullscreen ? 'h-full' : height} z-0 bg-slate-100`}
+          style={isFullscreen ? { height: 'calc(100vh - 58px)' } : undefined}
         />
 
         {/* Floating Custom Zoom Controls */}

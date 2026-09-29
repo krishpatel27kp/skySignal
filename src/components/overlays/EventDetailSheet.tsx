@@ -19,14 +19,13 @@ import {
   Radio,
   AlertTriangle,
   CheckCircle2,
-  GitMerge,
   Ban,
   TrendingUp,
   Sparkles,
   Eye,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../../data/mock';
+import { CATEGORY_CONFIG, SEVERITY_CONFIG, formatConfidence, formatEventId } from '../../data/mock';
 import { verifyEvent, escalateEvent, rejectEvent } from '../../services/apiClient';
 import type { WeatherCategory, Severity, LifecycleStatus, WeatherEvent } from '../../types/weather';
 
@@ -79,7 +78,7 @@ export default function EventDetailSheet({
   const state = event.state ?? event.location?.state ?? 'India';
   const lat = event.lat ?? event.location?.lat ?? 20.5937;
   const lon = event.lon ?? event.lng ?? event.location?.lng ?? 78.9629;
-  const confidence = event.confidence ?? 88;
+  const confidence = formatConfidence(event.confidence ?? 88);
   const sourceCount = event.independent_source_count ?? event.sources ?? 3;
   const hasContradiction = event.has_contradiction ?? false;
 
@@ -124,7 +123,7 @@ export default function EventDetailSheet({
   const handleReject = async () => {
     try {
       setIsSubmitting(true);
-      const res = await rejectEvent(event.id);
+      await rejectEvent(event.id);
       setCurrentStatus('resolved'); // Assume reject resolves/invalidates it
       onStatusChange?.(event.id, 'resolved');
       triggerToast(`Event ${event.id} rejected and invalidated.`);
@@ -140,7 +139,7 @@ export default function EventDetailSheet({
     <>
       {/* Backdrop — screen-covering dimming background strictly behind drawer at z-[90] */}
       <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[90] transition-opacity animate-fade-in"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[90] transition-opacity animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -164,7 +163,7 @@ export default function EventDetailSheet({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[10px] font-black tracking-wide text-sky-700 bg-sky-100/90 px-2 py-0.5 rounded-md">
-                  {event.id}
+                  {formatEventId(event.id)}
                 </span>
                 <span className="text-[11px] text-slate-600 font-medium">
                   Updated: {new Date(event.last_updated_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} IST
@@ -248,7 +247,7 @@ export default function EventDetailSheet({
 
             {/* Lifecycle Stage Meter */}
             <div className="pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
                 <span>Lifecycle Evolution Stage</span>
                 <span className="text-sky-600 font-mono">Stage {currentStageIndex + 1} of 6</span>
               </div>
@@ -408,7 +407,7 @@ export default function EventDetailSheet({
                     </span>
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs text-slate-400">
                   Click any thumbnail to inspect high-resolution ground truth evidence.
                 </p>
               </div>

@@ -5,7 +5,6 @@
    ═══════════════════════════════════════════════════════ */
 
 import axios from 'axios';
-import { useEffect, useRef, useState, useCallback } from 'react';
 import type {
   WeatherEvent,
   Report,
@@ -13,8 +12,6 @@ import type {
   EventFilters,
   ReportFilters,
   BulkActionPayload,
-  TelemetryMessage,
-  TelemetryEventType,
 } from '../types/weather';
 
 // ═══════════════════════════════════════════════════════

@@ -4,9 +4,10 @@
    Integrated with react-i18next for bilingual support
    ═══════════════════════════════════════════════════════ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getDashboardStats, getDuplicateClusters } from '../../services/apiClient';
 import {
   Activity,
   BarChart3,
@@ -33,11 +34,11 @@ interface SidebarNavItem {
   badge?: number;
 }
 
-const navItems: SidebarNavItem[] = [
+const baseNavItems: SidebarNavItem[] = [
   { id: 'overview',       i18nKey: 'nav.overview',           icon: 'LayoutDashboard', path: '/' },
   { id: 'events',         i18nKey: 'nav.eventExplorer',      icon: 'Activity',        path: '/events' },
-  { id: 'verification',   i18nKey: 'nav.verificationQueue',  icon: 'ClipboardCheck',  path: '/verification', badge: 12 },
-  { id: 'duplicates',     i18nKey: 'nav.duplicateReview',    icon: 'Copy',            path: '/duplicates', badge: 3 },
+  { id: 'verification',   i18nKey: 'nav.verificationQueue',  icon: 'ClipboardCheck',  path: '/verification' },
+  { id: 'duplicates',     i18nKey: 'nav.duplicateReview',    icon: 'Copy',            path: '/duplicates' },
   { id: 'analytics',      i18nKey: 'nav.analytics',          icon: 'BarChart3',       path: '/analytics' },
   { id: 'sources',        i18nKey: 'nav.dataSources',        icon: 'Database',        path: '/sources' },
   { id: 'audit',          i18nKey: 'nav.auditLog',           icon: 'FileText',        path: '/audit' },
@@ -60,6 +61,54 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [counts, setCounts] = useState<{ verification: number; duplicates: number }>({
+    verification: 0,
+    duplicates: 0,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCounts = async () => {
+      try {
+        const [statsRes, clustersRes] = await Promise.allSettled([
+          getDashboardStats(),
+          getDuplicateClusters(),
+        ]);
+        if (!isMounted) return;
+        setCounts({
+          verification:
+            statsRes.status === 'fulfilled' && statsRes.value?.pending_reports !== undefined
+              ? statsRes.value.pending_reports
+              : 0,
+          duplicates:
+            clustersRes.status === 'fulfilled' && Array.isArray(clustersRes.value)
+              ? clustersRes.value.length
+              : 0,
+        });
+      } catch (e) {
+        console.warn('Failed to fetch sidebar counts:', e);
+      }
+    };
+
+    fetchCounts();
+    const handleUpdate = () => fetchCounts();
+    window.addEventListener('skysignal:telemetry', handleUpdate);
+    window.addEventListener('skysignal:counts_updated', handleUpdate);
+    const interval = setInterval(fetchCounts, 15000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('skysignal:telemetry', handleUpdate);
+      window.removeEventListener('skysignal:counts_updated', handleUpdate);
+    };
+  }, []);
+
+  const navItems = baseNavItems.map((item) => {
+    if (item.path === '/verification') return { ...item, badge: counts.verification };
+    if (item.path === '/duplicates') return { ...item, badge: counts.duplicates };
+    return item;
+  });
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';

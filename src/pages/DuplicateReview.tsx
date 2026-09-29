@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   Copy,
   GitMerge,
@@ -38,6 +39,7 @@ interface MergedClusterRecord {
 }
 
 export default function DuplicateReview() {
+  const { isAdmin } = useAuth();
   const [clusters, setClusters] = useState<DuplicateCluster[]>([]);
   const [loading, setLoading] = useState(true);
   const [mergedRecords, setMergedRecords] = useState<Map<string, MergedClusterRecord>>(new Map());
@@ -47,13 +49,22 @@ export default function DuplicateReview() {
 
   useEffect(() => {
     async function load() {
+      if (!isAdmin) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
-      const data = await getDuplicateClusters();
-      setClusters(data);
-      setLoading(false);
+      try {
+        const data = await getDuplicateClusters();
+        setClusters(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
-  }, []);
+  }, [isAdmin]);
 
   // Merge handler
   const handleMergeCluster = async (cluster: DuplicateCluster) => {

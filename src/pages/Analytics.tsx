@@ -136,11 +136,11 @@ export default function Analytics() {
   const [timeFilter, setTimeFilter] = useState<'24h' | '7d' | '30d'>('24h');
 
   // State for fetched analytics data
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [timeseriesData, setTimeseriesData] = useState<any[]>(HOURLY_INGESTION_DATA);
   const [categoryData, setCategoryData] = useState<any[]>(HAZARD_DISTRIBUTION);
   const [sourceData, setSourceData] = useState<any[]>(SOURCE_RELIABILITY);
-  const [statusData, setStatusData] = useState<any[]>([]);
+  const [, setStatusData] = useState<any[]>([]);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
 
   useEffect(() => {

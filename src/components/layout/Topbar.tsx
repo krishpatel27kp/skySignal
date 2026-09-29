@@ -23,12 +23,14 @@ import type { WeatherEvent } from '../../types/weather';
 
 interface TopbarProps {
   onToggleMobileMenu: () => void;
+  sidebarCollapsed?: boolean;
+  onToggleSidebarCollapse?: () => void;
 }
 
 const ROUTE_TITLES: Record<string, { en: string; hi: string }> = {
-  '/': { en: 'Situational Overview', hi: 'स्थिति अवलोकन' },
-  '/explorer': { en: 'Event Explorer', hi: 'घटना एक्सप्लोरर' },
-  '/events': { en: 'Event Explorer', hi: 'घटना एक्सप्लोरर' },
+  '/': { en: 'Weather Status', hi: 'मौसम की स्थिति' },
+  '/explorer': { en: 'Weather Status', hi: 'मौसम की स्थिति' },
+  '/events': { en: 'Weather Status', hi: 'मौसम की स्थिति' },
   '/verification': { en: 'Verification Queue', hi: 'सत्यापन कतार' },
   '/duplicates': { en: 'Duplicate Review', hi: 'डुप्लिकेट समीक्षा' },
   '/analytics': { en: 'Analytics Dashboard', hi: 'एनालिटिक्स डैशबोर्ड' },
@@ -37,7 +39,9 @@ const ROUTE_TITLES: Record<string, { en: string; hi: string }> = {
   '/citizen': { en: 'Citizen Portal', hi: 'नागरिक पोर्टल' },
 };
 
-export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
+export default function Topbar({
+  onToggleMobileMenu,
+}: TopbarProps) {
   const { i18n } = useTranslation();
   const location = useLocation();
   const { isAdmin, user, openLoginModal, logout } = useAuth();
@@ -85,8 +89,8 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
 
   // Breadcrumbs determination
   const currentRouteMeta = ROUTE_TITLES[location.pathname] || {
-    en: 'Command Dashboard',
-    hi: 'कमांड डैशबोर्ड',
+    en: 'Weather Status',
+    hi: 'मौसम की स्थिति',
   };
 
   const handleLanguageChange = (lang: 'en' | 'hi') => {
@@ -121,7 +125,7 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
         >
           <Link
             to="/"
-            className="hover:text-sky-600 transition-colors text-slate-500"
+            className="hover:text-amber-600 transition-colors text-slate-500"
           >
             {isHindi ? 'होम' : 'Home'}
           </Link>
@@ -130,32 +134,14 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
             {isHindi ? currentRouteMeta.hi : currentRouteMeta.en}
           </span>
         </nav>
-
-        {/* Public Guest Mode Badge */}
-        {!isAdmin && (
-          <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-semibold">
-            Public View
-          </span>
-        )}
       </div>
 
-      {/* ── Right: Clock, Telemetry Status, i18n, Alerts & Auth ── */}
+      {/* ── Right: Clock, i18n, Alerts & Auth ── */}
       <div className="flex items-center gap-2.5 sm:gap-3">
         {/* Live IST Digital Clock */}
-        <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600">
-          <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+        <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600 tabular-nums">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
           <span>{istTime || '24 Sep 2026 · 14:32:00 IST'}</span>
-        </div>
-
-        {/* Telemetry Status Chip ("LIVE TELEMETRY") */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 shadow-xs">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span className="text-[10px] font-black uppercase tracking-wider">
-            Live Telemetry
-          </span>
         </div>
 
         {/* Language Switch Dropdown (EN / हिन्दी) */}
@@ -164,7 +150,7 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
             onClick={() => handleLanguageChange('en')}
             className={`px-2 py-1 rounded-lg transition-colors cursor-pointer ${
               !isHindi
-                ? 'bg-white text-sky-700 shadow-xs'
+                ? 'bg-white text-amber-800 shadow-xs'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -174,7 +160,7 @@ export default function Topbar({ onToggleMobileMenu }: TopbarProps) {
             onClick={() => handleLanguageChange('hi')}
             className={`px-2 py-1 rounded-lg transition-colors cursor-pointer ${
               isHindi
-                ? 'bg-white text-sky-700 shadow-xs'
+                ? 'bg-white text-amber-800 shadow-xs'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >

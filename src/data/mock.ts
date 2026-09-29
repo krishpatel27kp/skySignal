@@ -11,7 +11,6 @@ import type {
   ChartDataPoint,
   SourceReliability,
   WeatherCategory,
-  Severity,
 } from '../types';
 
 // ── Weather Category Metadata ──
@@ -30,13 +29,32 @@ export const CATEGORY_CONFIG: Record<
 
 // ── Severity Metadata ──
 export const SEVERITY_CONFIG: Record<
-  Severity,
+  string,
   { label: string; className: string; icon: string }
 > = {
-  minor:    { label: 'Minor',    className: 'badge-severity-minor',    icon: '●' },
-  moderate: { label: 'Moderate', className: 'badge-severity-moderate', icon: '▲' },
-  severe:   { label: 'Severe',   className: 'badge-severity-severe',   icon: '◆' },
+  critical: { label: 'Critical', className: 'badge-severity-critical font-bold', icon: '●' },
+  high:     { label: 'High',     className: 'badge-severity-high font-bold',     icon: '●' },
+  severe:   { label: 'Severe',   className: 'badge-severity-severe font-bold',   icon: '●' },
+  moderate: { label: 'Moderate', className: 'badge-severity-moderate font-medium', icon: '●' },
+  minor:    { label: 'Minor',    className: 'badge-severity-minor font-medium',    icon: '●' },
+  low:      { label: 'Low',      className: 'badge-severity-low font-medium',      icon: '●' },
 };
+
+/** Normalizes decimal (0.0 - 1.0) or percentage (0 - 100) confidence to clean whole percentage */
+export function formatConfidence(val: number | undefined | null): number {
+  if (val == null || isNaN(val)) return 85;
+  const num = Number(val);
+  return num <= 1.0 ? Math.round(num * 100) : Math.round(num);
+}
+
+/** Formats cryptic UUIDs (e.g. e0000000-0000-0000-0000-000000000012) into clean human-friendly IDs (e.g. EVT-2026-0012) */
+export function formatEventId(id: string | undefined | null): string {
+  if (!id) return 'EVT-LIVE';
+  if (id.startsWith('EVT-')) return id;
+  const stripped = id.replace(/-/g, '');
+  const suffix = stripped.slice(-4).toUpperCase();
+  return `EVT-2026-${suffix}`;
+}
 
 // ── Mock Weather Events ──
 export const mockEvents: WeatherEvent[] = [

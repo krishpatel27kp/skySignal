@@ -5,7 +5,7 @@
    ═══════════════════════════════════════════════════════ */
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { submitReport, batchSyncReports } from '../services/apiClient';
+import { submitReport } from '../services/apiClient';
 import type { WeatherCategory, Severity } from '../types/weather';
 
 export interface QueuedReport {

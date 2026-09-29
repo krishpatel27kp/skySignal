@@ -29,7 +29,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_TOKEN_KEY = 'admin_token';
-const STORAGE_USER_KEY = 'admin_user';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);

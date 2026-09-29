@@ -14,8 +14,8 @@ export type WeatherCategory =
   | 'dust storm'
   | 'strong wind';
 
-// ── Strict 3-Tier Severity ──
-export type Severity = 'minor' | 'moderate' | 'severe';
+// ── Comprehensive Severity Taxonomy ──
+export type Severity = 'critical' | 'high' | 'severe' | 'moderate' | 'minor' | 'low' | string;
 
 // ── Event Lifecycle States ──
 export type LifecycleStatus =

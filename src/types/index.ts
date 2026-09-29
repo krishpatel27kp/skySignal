@@ -3,8 +3,8 @@
    Strict taxonomy for weather intelligence platform
    ═══════════════════════════════════════════════════════ */
 
-// ── Strict 3-Tier Severity ──
-export type Severity = 'minor' | 'moderate' | 'severe';
+// ── Comprehensive Severity Taxonomy ──
+export type Severity = 'critical' | 'high' | 'severe' | 'moderate' | 'minor' | 'low' | string;
 
 // ── Strict 7-Category Weather Taxonomy ──
 export type WeatherCategory =

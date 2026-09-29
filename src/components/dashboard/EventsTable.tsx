@@ -5,7 +5,7 @@
 
 import { ChevronRight, ExternalLink, MapPin, ShieldCheck } from 'lucide-react';
 import type { WeatherEvent } from '../../types';
-import { CATEGORY_CONFIG, SEVERITY_CONFIG, formatTimeAgo } from '../../data/mock';
+import { CATEGORY_CONFIG, SEVERITY_CONFIG, formatTimeAgo, formatConfidence } from '../../data/mock';
 import { useAuth } from '../../context/AuthContext';
 
 interface EventsTableProps {
@@ -146,14 +146,14 @@ export default function EventsTable({ events, onSelectEvent }: EventsTableProps)
                     <div className="flex items-center gap-2">
                       <ShieldCheck size={13} className="text-[var(--color-primary-500)]" />
                       <span className="text-[12px] font-semibold text-[var(--color-text-primary)]">
-                        {event.confidence}%
+                        {formatConfidence(event.confidence)}%
                       </span>
                       <div className="w-12 h-1.5 rounded-full bg-[var(--color-surface-active)] overflow-hidden">
                         <div
                           className="h-full rounded-full"
                           style={{
-                            width: `${event.confidence}%`,
-                            backgroundColor: event.confidence >= 85 ? '#10b981' : event.confidence >= 70 ? '#f59e0b' : '#ef4444',
+                            width: `${formatConfidence(event.confidence)}%`,
+                            backgroundColor: formatConfidence(event.confidence) >= 85 ? '#10b981' : formatConfidence(event.confidence) >= 70 ? '#f59e0b' : '#ef4444',
                           }}
                         />
                       </div>
